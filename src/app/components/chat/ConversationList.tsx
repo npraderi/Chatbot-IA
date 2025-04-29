@@ -1,7 +1,6 @@
-
-import { Conversation } from '@/services/chatService';
-import { MessageSquare, Trash } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Conversation } from "@/services/chatService";
+import { MessageSquare, Trash } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ConversationListProps {
@@ -15,7 +14,7 @@ const ConversationList = ({
   conversations,
   activeConversation,
   onSelectConversation,
-  onDeleteConversation
+  onDeleteConversation,
 }: ConversationListProps) => {
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString();
@@ -31,12 +30,12 @@ const ConversationList = ({
               onClick={() => onSelectConversation(conv)}
               className={`p-3 border-b cursor-pointer flex justify-between items-center ${
                 activeConversation?.id === conv.id
-                  ? 'bg-azul-claro/30'
-                  : 'hover:bg-gray-50'
+                  ? "bg-[#BED1E0]/30"
+                  : "hover:bg-gray-50"
               }`}
             >
               <div className="flex items-center flex-grow">
-                <div className="w-10 h-10 rounded-full bg-azul-principal flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-[#2B577A] flex items-center justify-center">
                   <MessageSquare size={18} className="text-white" />
                 </div>
                 <div className="ml-3 flex-grow">
@@ -44,7 +43,7 @@ const ConversationList = ({
                   <div className="text-xs text-gray-500 truncate max-w-[180px]">
                     {conv.messages.length > 0
                       ? conv.messages[conv.messages.length - 1].content
-                      : 'Nueva conversación'}
+                      : "Nueva conversación"}
                   </div>
                 </div>
               </div>

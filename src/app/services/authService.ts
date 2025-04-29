@@ -1,3 +1,4 @@
+// services/authService.ts
 "use client";
 
 export type UserRole = "Superadministrador" | "Usuario";
@@ -32,10 +33,16 @@ const MOCK_USERS: User[] = [
 export const authService = {
   login: async (email: string, password: string): Promise<User | null> => {
     if (typeof window === "undefined") return null;
-    const user = MOCK_USERS.find((u) => u.email === email);
+    // simulamos retardo
     await new Promise((r) => setTimeout(r, 500));
-    if (!user || password.length < 4) return null;
 
+    const user = MOCK_USERS.find((u) => u.email === email);
+    // comprobamos existencia y que la contraseña case
+    if (!user || user.password !== password) {
+      return null;
+    }
+
+    // guardamos en localStorage
     localStorage.setItem("currentUser", JSON.stringify(user));
     return user;
   },
@@ -47,20 +54,12 @@ export const authService = {
 
   getCurrentUser: (): User | null => {
     if (typeof window === "undefined") return null;
-
-    let userJson = localStorage.getItem("currentUser");
-
-    // Si no hay nada, semilla el usuario por defecto
-    if (!userJson) {
-      const defaultUser = MOCK_USERS[0];
-      localStorage.setItem("currentUser", JSON.stringify(defaultUser));
-      userJson = JSON.stringify(defaultUser);
-    }
-
+    const userJson = localStorage.getItem("currentUser");
+    if (!userJson) return null;
     try {
       return JSON.parse(userJson) as User;
-    } catch (e) {
-      console.error("Error parsing user data:", e);
+    } catch {
+      console.error("Error parsing user data");
       return null;
     }
   },
@@ -69,6 +68,7 @@ export const authService = {
     return user?.role === "Superadministrador";
   },
 
+  // Alias para mantener compatibilidad con importaciones previas
   isSuperAdmin: (user: User | null): boolean => {
     return user?.role === "Superadministrador";
   },

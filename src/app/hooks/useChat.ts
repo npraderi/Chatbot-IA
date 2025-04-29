@@ -9,115 +9,86 @@ export const useChat = (currentUser: User | null) => {
   const [activeConversation, setActiveConversation] =
     useState<Conversation | null>(null);
 
-  // Usar useCallback para las funciones que dependen de currentUser
   const loadConversations = useCallback(() => {
     if (!currentUser) return;
-
     try {
-      const userConversations = chatService.getConversations(currentUser.id);
-      setConversations(userConversations);
-
-      // Solo establecer la conversación activa si no hay una activa y hay conversaciones
-      if (userConversations.length > 0 && !activeConversation) {
-        setActiveConversation(userConversations[0]);
+      const convs = chatService.getConversations(currentUser.id);
+      setConversations(convs);
+      if (!activeConversation && convs.length) {
+        setActiveConversation(convs[0]);
       }
-    } catch (error) {
+    } catch {
       toast.error("Error al cargar las conversaciones");
     }
   }, [currentUser, activeConversation]);
 
-  // Usar useEffect con dependencia en currentUser
   useEffect(() => {
-    if (currentUser) {
-      loadConversations();
-    }
+    loadConversations();
   }, [currentUser, loadConversations]);
 
   const createNewConversation = useCallback(() => {
     if (!currentUser) return null;
-
     try {
-      const newConversation = chatService.createConversation(
+      const newConv = chatService.createConversation(
         currentUser.id,
         `Conversación ${conversations.length + 1}`
       );
-
-      setConversations((prevConversations) => [
-        newConversation,
-        ...prevConversations,
-      ]);
-      setActiveConversation(newConversation);
-      return newConversation;
-    } catch (error) {
-      toast.error("Error al crear nueva conversación");
+      setConversations((c) => [newConv, ...c]);
+      setActiveConversation(newConv);
+      return newConv;
+    } catch {
+      toast.error("Error al crear conversación");
       return null;
     }
   }, [currentUser, conversations.length]);
 
   const deleteConversation = useCallback(
-    (conversationId: string) => {
+    (id: string) => {
       if (!currentUser) return;
-
       try {
-        chatService.deleteConversation(currentUser.id, conversationId);
-
-        setConversations((prevConversations) => {
-          const updatedConversations = prevConversations.filter(
-            (conv) => conv.id !== conversationId
-          );
-
-          if (activeConversation?.id === conversationId) {
-            setActiveConversation(
-              updatedConversations.length > 0 ? updatedConversations[0] : null
-            );
-          }
-
-          return updatedConversations;
-        });
-
+        chatService.deleteConversation(currentUser.id, id);
+        setConversations((c) => c.filter((x) => x.id !== id));
+        if (activeConversation?.id === id) {
+          setActiveConversation(conversations[0] || null);
+        }
         toast.success("Conversación eliminada");
-      } catch (error) {
-        toast.error("Error al eliminar la conversación");
+      } catch {
+        toast.error("Error al eliminar conversación");
       }
     },
-    [currentUser, activeConversation]
+    [currentUser, activeConversation, conversations]
   );
 
   const sendMessage = useCallback(
-    (message: string) => {
-      if (!currentUser || !activeConversation || !message.trim()) {
-        return null;
-      }
-
+    async (text: string) => {
+      if (!currentUser || !activeConversation || !text.trim()) return null;
       try {
-        // Usamos el ID de la conversación activa actual
-        const result = chatService.sendMessage(
+        // 1) Envía y renderiza YA el mensaje del usuario
+        const { conversation: convAfterUser } = chatService.sendUserMessage(
           currentUser.id,
           activeConversation.id,
-          message.trim()
+          text.trim()
         );
+        setActiveConversation(convAfterUser);
+        setConversations((c) => [
+          convAfterUser,
+          ...c.filter((x) => x.id !== convAfterUser.id),
+        ]);
 
-        // Actualizamos la conversación activa con la respuesta
-        setActiveConversation(result.conversation);
+        // 2) Luego pide broma y la añade
+        const convWithBot = await chatService.sendBotResponse(
+          currentUser.id,
+          activeConversation.id
+        );
+        setActiveConversation(convWithBot);
+        setConversations((c) => [
+          convWithBot,
+          ...c.filter((x) => x.id !== convWithBot.id),
+        ]);
 
-        // Actualizamos solo la conversación actual en la lista usando una función de actualización
-        setConversations((prevConversations) => {
-          const updatedConversations = prevConversations.map((conv) => {
-            if (conv.id === activeConversation.id) {
-              return result.conversation;
-            }
-            return conv;
-          });
-
-          // Reordenamos las conversaciones por fecha
-          return [...updatedConversations].sort(
-            (a, b) => b.lastMessageDate - a.lastMessageDate
-          );
-        });
-
-        return result;
-      } catch (error) {
-        toast.error("Error al enviar el mensaje");
+        return { conversation: convWithBot };
+      } catch {
+        toast.error("Error al enviar mensaje");
         return null;
       }
     },

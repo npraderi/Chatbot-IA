@@ -14,40 +14,26 @@ export interface Conversation {
   userName: string;
 }
 
-const generateId = () => Math.random().toString(36).substr(2, 9);
+const generateId = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 9)}`;
 
-// Respuestas predefinidas del chatbot
-const BOT_RESPONSES = [
-  "¿En qué puedo ayudarte hoy?",
-  "Gracias por tu mensaje. Estoy procesando tu solicitud.",
-  "Entiendo lo que necesitas. ¿Hay algo más en lo que pueda ayudarte?",
-  "Estoy aquí para asistirte con cualquier consulta que tengas.",
-  "Por favor, dame más detalles sobre tu consulta.",
-  "Estoy verificando esa información para ti.",
-  "¿Necesitas alguna otra información?",
-  "Comprendo tu situación. Vamos a resolverla juntos.",
-  "Esta es una respuesta simulada. En la integración real, aquí iría la respuesta del chatbot.",
-];
+const STORAGE_KEY = (userId: string) => `conversations_${userId}`;
 
-// Servicio para gestionar las conversaciones
 export const chatService = {
-  getConversations: (userId: string): Conversation[] => {
-    const key = `conversations_${userId}`;
-    const conversationsJson = localStorage.getItem(key);
-
-    if (!conversationsJson) {
-      return [];
-    }
-
-    return JSON.parse(conversationsJson);
+  getConversations(userId: string): Conversation[] {
+    const json = localStorage.getItem(STORAGE_KEY(userId));
+    return json ? JSON.parse(json) : [];
   },
 
-  createConversation: (userId: string, title: string): Conversation => {
-    const conversations = chatService.getConversations(userId);
+  saveConversations(userId: string, convs: Conversation[]) {
+    localStorage.setItem(STORAGE_KEY(userId), JSON.stringify(convs));
+  },
 
-    const newConversation: Conversation = {
+  createConversation(userId: string, title: string): Conversation {
+    const convs = this.getConversations(userId);
+    const newConv: Conversation = {
       id: generateId(),
-      title: title || `Conversación ${conversations.length + 1}`,
+      title: title || `Conversación ${convs.length + 1}`,
       messages: [
         {
           id: generateId(),
@@ -60,100 +46,73 @@ export const chatService = {
       lastMessageDate: Date.now(),
       userName: "",
     };
-
-    conversations.unshift(newConversation);
-    localStorage.setItem(
-      `conversations_${userId}`,
-      JSON.stringify(conversations)
-    );
-
-    return newConversation;
+    convs.unshift(newConv);
+    this.saveConversations(userId, convs);
+    return newConv;
   },
 
-  getConversation: (
-    userId: string,
-    conversationId: string
-  ): Conversation | null => {
-    const conversations = chatService.getConversations(userId);
-    return conversations.find((conv) => conv.id === conversationId) || null;
-  },
-
-  sendMessage: (
+  sendUserMessage(
     userId: string,
     conversationId: string,
     content: string
-  ): { conversation: Conversation; message: Message } => {
-    const conversations = chatService.getConversations(userId);
-    const conversationIndex = conversations.findIndex(
-      (conv) => conv.id === conversationId
-    );
+  ): { conversation: Conversation; message: Message } {
+    const convs = this.getConversations(userId);
+    const idx = convs.findIndex((c) => c.id === conversationId);
+    if (idx === -1) throw new Error("Conversación no encontrada");
 
-    if (conversationIndex === -1) {
-      throw new Error("Conversación no encontrada");
-    }
-
-    const userMessage: Message = {
+    const userMsg: Message = {
       id: generateId(),
       content,
       timestamp: Date.now(),
       senderId: userId,
       isUser: true,
     };
+    convs[idx].messages.push(userMsg);
+    convs[idx].lastMessageDate = userMsg.timestamp;
+    convs.sort((a, b) => b.lastMessageDate - a.lastMessageDate);
+    this.saveConversations(userId, convs);
 
-    // Añadir el mensaje del usuario a la conversación
-    conversations[conversationIndex].messages.push(userMessage);
-    conversations[conversationIndex].lastMessageDate = userMessage.timestamp;
-
-    // Simular respuesta del bot
-    setTimeout(() => {
-      const botResponse: Message = {
-        id: generateId(),
-        content:
-          BOT_RESPONSES[Math.floor(Math.random() * BOT_RESPONSES.length)],
-        timestamp: Date.now(),
-        senderId: "bot",
-        isUser: false,
-      };
-
-      const currentConversations = chatService.getConversations(userId);
-      const currentIndex = currentConversations.findIndex(
-        (conv) => conv.id === conversationId
-      );
-
-      if (currentIndex !== -1) {
-        currentConversations[currentIndex].messages.push(botResponse);
-        currentConversations[currentIndex].lastMessageDate =
-          botResponse.timestamp;
-        localStorage.setItem(
-          `conversations_${userId}`,
-          JSON.stringify(currentConversations)
-        );
-      }
-    }, 1000);
-
-    // Reordenar conversaciones por fecha
-    conversations.sort((a, b) => b.lastMessageDate - a.lastMessageDate);
-
-    localStorage.setItem(
-      `conversations_${userId}`,
-      JSON.stringify(conversations)
-    );
-
-    return {
-      conversation: conversations[conversationIndex],
-      message: userMessage,
-    };
+    return { conversation: convs[idx], message: userMsg };
   },
 
-  deleteConversation: (userId: string, conversationId: string): void => {
-    const conversations = chatService.getConversations(userId);
-    const filteredConversations = conversations.filter(
-      (conv) => conv.id !== conversationId
-    );
+  async sendBotResponse(
+    userId: string,
+    conversationId: string
+  ): Promise<Conversation> {
+    const convs = this.getConversations(userId);
+    const idx = convs.findIndex((c) => c.id === conversationId);
+    if (idx === -1) throw new Error("Conversación no encontrada");
 
-    localStorage.setItem(
-      `conversations_${userId}`,
-      JSON.stringify(filteredConversations)
+    let botText: string;
+    try {
+      const res = await fetch("https://icanhazdadjoke.com/", {
+        headers: { Accept: "application/json" },
+      });
+      const { joke } = await res.json();
+      botText = joke;
+    } catch {
+      botText = "Oops, no pude conseguir una broma 😅";
+    }
+
+    const botMsg: Message = {
+      id: generateId(),
+      content: botText,
+      timestamp: Date.now(),
+      senderId: "bot",
+      isUser: false,
+    };
+    convs[idx].messages.push(botMsg);
+    convs[idx].lastMessageDate = botMsg.timestamp;
+    convs.sort((a, b) => b.lastMessageDate - a.lastMessageDate);
+    this.saveConversations(userId, convs);
+
+    return convs[idx];
+  },
+
+  deleteConversation(userId: string, conversationId: string): void {
+    const convs = this.getConversations(userId).filter(
+      (c) => c.id !== conversationId
     );
+    this.saveConversations(userId, convs);
   },
 };
