@@ -33,22 +33,22 @@ const Navigation: React.FC = () => {
           <>
             <Link
               href="/dashboard/users"
-              className={
-                pathname === "/dashboard/users"
+              className={`flex flex-col items-center gap-1 ${
+                pathname === "/dashboard/profile"
                   ? "text-[#2B577A] font-semibold"
                   : "text-gray-600 hover:text-[#2B577A]"
-              }
+              }`}
             >
               <Users size={24} />
               <span className="text-xs">Usuarios</span>
             </Link>
             <Link
               href="/dashboard/chat-history"
-              className={
-                pathname === "/dashboard/chat-history"
+              className={`flex flex-col items-center gap-1 ${
+                pathname === "/dashboard/profile"
                   ? "text-[#2B577A] font-semibold"
                   : "text-gray-600 hover:text-[#2B577A]"
-              }
+              }`}
             >
               <History size={24} />
               <span className="text-xs">Historial</span>
@@ -57,22 +57,22 @@ const Navigation: React.FC = () => {
         )}
         <Link
           href="/dashboard/chat"
-          className={
-            pathname === "/dashboard/chat"
+          className={`flex flex-col items-center gap-1 ${
+            pathname === "/dashboard/profile"
               ? "text-[#2B577A] font-semibold"
               : "text-gray-600 hover:text-[#2B577A]"
-          }
+          }`}
         >
           <MessageSquare size={24} />
           <span className="text-xs">Chat</span>
         </Link>
         <Link
           href="/dashboard/profile"
-          className={
+          className={`flex flex-col items-center gap-1 ${
             pathname === "/dashboard/profile"
               ? "text-[#2B577A] font-semibold"
               : "text-gray-600 hover:text-[#2B577A]"
-          }
+          }`}
         >
           <User size={24} />
           <span className="text-xs">Perfil</span>
