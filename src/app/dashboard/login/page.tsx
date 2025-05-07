@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { authService } from "@/services/authService";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,16 @@ const Login: React.FC = () => {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {}
   );
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const currentUser = await authService.getCurrentUser();
+      if (currentUser) {
+        router.push("/dashboard/chat");
+      }
+    };
+    checkAuth();
+  }, [router]);
 
   const validateForm = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
@@ -110,15 +120,6 @@ const Login: React.FC = () => {
           >
             {loading ? "Iniciando sesión..." : "Iniciar sesión"}
           </button>
-
-          <div className="text-center text-sm text-gray-500">
-            <p>Para demostración, use:</p>
-            <p>• admin@example.com (Superadministrador)</p>
-            <p>• user@example.com (Usuario)</p>
-            <p className="mt-1">
-              Con cualquier contraseña de al menos 4 caracteres
-            </p>
-          </div>
         </form>
       </div>
     </div>
