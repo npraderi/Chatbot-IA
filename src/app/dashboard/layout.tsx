@@ -16,7 +16,17 @@ export default function DashboardLayout({
 
   // Cada vez que cambie la ruta, releemos el user
   useEffect(() => {
-    setCurrentUser(authService.getCurrentUser());
+    const loadUser = async () => {
+      try {
+        const user = await authService.getCurrentUser();
+        setCurrentUser(user);
+      } catch (error) {
+        console.error("Error al cargar usuario:", error);
+        setCurrentUser(null);
+      }
+    };
+
+    loadUser();
   }, [pathname]);
 
   return (

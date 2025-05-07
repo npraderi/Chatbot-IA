@@ -13,18 +13,21 @@ const Navigation: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
 
   useEffect(() => {
-    setCurrentUser(authService.getCurrentUser());
+    const loadUser = async () => {
+      const user = await authService.getCurrentUser();
+      setCurrentUser(user);
+    };
+    loadUser();
   }, []);
 
   if (!currentUser) {
-    console.log(currentUser);
-    return null; // o un placeholder
+    return null;
   }
-  console.log(currentUser);
-  const isAdmin = authService.isAdmin(currentUser);
+
+  const isAdmin = currentUser.role === "Admin";
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow z-50 py-2">
       <div className="max-w-lg mx-auto flex justify-around">
         {isAdmin && (
           <>

@@ -1,23 +1,30 @@
+import React from "react";
 import { Conversation } from "@/services/chatService";
-import { MessageSquare, Trash } from "lucide-react";
+import { MessageSquare, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface ConversationListProps {
   conversations: Conversation[];
   activeConversation: Conversation | null;
   onSelectConversation: (conversation: Conversation) => void;
   onDeleteConversation: (e: React.MouseEvent, conversationId: string) => void;
+  currentUserId: string;
+  isAdmin: boolean;
 }
 
-const ConversationList = ({
+const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
   activeConversation,
   onSelectConversation,
   onDeleteConversation,
-}: ConversationListProps) => {
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString();
+  currentUserId,
+  isAdmin,
+}) => {
+  const formatDate = (date: Date) => {
+    return format(date, "Pp", { locale: es });
   };
 
   return (
@@ -49,16 +56,18 @@ const ConversationList = ({
               </div>
               <div className="flex flex-col items-end">
                 <span className="text-xs text-gray-500 mb-1">
-                  {formatDate(conv.lastMessageDate)}
+                  {formatDate(new Date(conv.lastMessageDate))}
                 </span>
-                <Button
-                  onClick={(e) => onDeleteConversation(e, conv.id)}
-                  variant="ghost"
-                  size="icon"
-                  className="text-gray-400 hover:text-red-500"
-                >
-                  <Trash size={16} />
-                </Button>
+                {(isAdmin || conv.userId === currentUserId) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-gray-400 hover:text-red-500 cursor-pointer"
+                    onClick={(e) => onDeleteConversation(e, conv.id)}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                )}
               </div>
             </div>
           ))

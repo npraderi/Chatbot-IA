@@ -36,6 +36,7 @@ const Users: React.FC = () => {
 
   const [currentLoggedUser, setCurrentLoggedUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
@@ -43,38 +44,55 @@ const Users: React.FC = () => {
     password: "",
     name: "",
     email: "",
-    role: "Usuario" as UserRole,
+    role: "User" as UserRole,
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  // 1. Comprobamos sesión al montar
-  useEffect(() => {
-    const u = authService.getCurrentUser();
-    if (!u) {
-      router.replace("/login");
-      return;
-    }
-    setCurrentLoggedUser(u);
-    loadUsers();
-  }, []);
-
-  // 2. Determinamos si es superadmin
-  const isSuperAdmin = authService.isSuperAdmin(currentLoggedUser);
-
-  const loadUsers = () => {
+  const loadUsers = async () => {
     try {
-      const loadedUsers = userService.getUsers();
+      const loadedUsers = await userService.getUsers();
       setUsers(loadedUsers);
-    } catch {
-      toast.error("Error al cargar los usuarios");
+    } catch (err) {
+      console.error("Error al cargar usuarios:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Error al cargar los usuarios"
+      );
     }
   };
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const user = await authService.getCurrentUser();
+        if (!user) {
+          router.replace("/dashboard/login");
+          return;
+        }
+        setCurrentLoggedUser(user);
+        await loadUsers();
+      } catch (err) {
+        console.error("Error al cargar datos:", err);
+        toast.error(
+          err instanceof Error ? err.message : "Error al cargar los datos"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [router]);
+
+  if (loading) return null;
+  if (!currentLoggedUser) return null;
+
+  // Verificar si el usuario actual es Admin
+  const isAdmin = currentLoggedUser.role === "Admin";
 
   const handleOpenModal = (user: User | null = null) => {
     if (user) {
       setFormData({
         username: user.name,
-        password: user.password || "",
+        password: "", // No mostramos la contraseña actual
         name: user.fullName || "",
         email: user.email,
         role: user.role,
@@ -86,7 +104,7 @@ const Users: React.FC = () => {
         password: "",
         name: "",
         email: "",
-        role: "Usuario",
+        role: "User",
       });
       setCurrentUser(null);
     }
@@ -116,55 +134,84 @@ const Users: React.FC = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = () => {
+    if (!formData.username.trim()) {
+      toast.error("El nombre de usuario es obligatorio");
+      return false;
+    }
+    if (!formData.password && !currentUser) {
+      toast.error("La contraseña es obligatoria para nuevos usuarios");
+      return false;
+    }
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast.error("El formato del email no es válido");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!validateForm()) return;
+
     try {
-      if (!formData.username) {
-        toast.error("El nombre de usuario es obligatorio");
-        return;
-      }
-      if (!formData.password && !currentUser) {
-        toast.error("La contraseña es obligatoria para nuevos usuarios");
-        return;
-      }
-
-      const userData: Partial<User> = {
-        name: formData.username,
-        email: formData.email,
-        role: formData.role,
-        password: formData.password,
-        fullName: formData.name,
-      };
-
       if (currentUser) {
-        userService.updateUser(currentUser.id, userData);
+        const userData: Partial<User> = {
+          name: formData.username.trim(),
+          email: formData.email.trim(),
+          role: formData.role,
+        };
+
+        // No permitir cambiar el rol si no es Admin
+        if (!isAdmin && userData.role !== currentUser.role) {
+          toast.error("No tienes permiso para cambiar el rol de usuario");
+          return;
+        }
+        await userService.updateUser(currentUser.id, userData);
         toast.success("Usuario actualizado correctamente");
       } else {
-        userService.createUser(userData as User);
+        const newUserData = {
+          name: formData.username.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+          role: formData.role,
+        };
+        await userService.createUser(newUserData);
         toast.success("Usuario creado correctamente");
       }
 
       handleCloseModal();
-      loadUsers();
-    } catch (error) {
+      await loadUsers();
+    } catch (err) {
+      console.error("Error al procesar usuario:", err);
       toast.error(
-        error instanceof Error ? error.message : "Error al procesar el usuario"
+        err instanceof Error ? err.message : "Error al procesar el usuario"
       );
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
     if (currentLoggedUser?.id === userId) {
       toast.error("No puedes eliminar tu propio usuario");
       return;
     }
+
+    const userToDelete = users.find((u) => u.id === userId);
+    if (userToDelete?.role === "Admin" && !isAdmin) {
+      toast.error("No tienes permiso para eliminar usuarios Admin");
+      return;
+    }
+
     try {
-      userService.deleteUser(userId);
+      await userService.deleteUser(userId);
       toast.success("Usuario eliminado correctamente");
-      loadUsers();
-    } catch {
-      toast.error("Error al eliminar el usuario");
+      await loadUsers();
+    } catch (err) {
+      console.error("Error al eliminar usuario:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Error al eliminar el usuario"
+      );
     }
   };
 
@@ -174,13 +221,15 @@ const Users: React.FC = () => {
         <h1 className="text-2xl font-bold text-[#2B577A]">
           Gestión de Usuarios
         </h1>
-        <Button
-          onClick={() => handleOpenModal()}
-          className="bg-[#336633] hover:bg-green-700 text-white"
-        >
-          <Plus size={18} className="mr-1" />
-          Nuevo Usuario
-        </Button>
+        {isAdmin && (
+          <Button
+            onClick={() => handleOpenModal()}
+            className="bg-[#336633] hover:bg-green-700 text-white"
+          >
+            <Plus size={18} className="mr-1" />
+            Nuevo Usuario
+          </Button>
+        )}
       </div>
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
@@ -189,9 +238,6 @@ const Users: React.FC = () => {
             <TableHeader className="bg-[#BED1E0]">
               <TableRow>
                 <TableHead className="text-[#2B577A]">Usuario</TableHead>
-                <TableHead className="text-[#2B577A]">
-                  Nombre/Institución
-                </TableHead>
                 <TableHead className="text-[#2B577A]">Email</TableHead>
                 <TableHead className="text-[#2B577A]">Rol</TableHead>
                 <TableHead className="text-[#2B577A] text-right">
@@ -216,18 +262,13 @@ const Users: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm text-gray-900">
-                      {user.fullName || "-"}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-gray-900">
                       {user.email || "-"}
                     </div>
                   </TableCell>
                   <TableCell>
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.role === "Superadministrador"
+                        user.role === "Admin"
                           ? "bg-purple-100 text-purple-800"
                           : "bg-green-100 text-green-800"
                       }`}
@@ -244,8 +285,8 @@ const Users: React.FC = () => {
                     >
                       <Edit size={18} />
                     </Button>
-                    {isSuperAdmin &&
-                      user.role !== "Superadministrador" &&
+                    {isAdmin &&
+                      user.role !== "Admin" &&
                       currentLoggedUser?.id !== user.id && (
                         <Button
                           onClick={() => handleDeleteUser(user.id)}
@@ -284,6 +325,7 @@ const Users: React.FC = () => {
                   onChange={handleInputChange}
                   required
                   className="w-full"
+                  placeholder="Ingrese el nombre de usuario"
                 />
               </div>
 
@@ -302,6 +344,7 @@ const Users: React.FC = () => {
                       onChange={handleInputChange}
                       required={!currentUser}
                       className="w-full pr-10"
+                      placeholder="Ingrese la contraseña"
                     />
                     <button
                       type="button"
@@ -326,18 +369,6 @@ const Users: React.FC = () => {
               </div>
 
               <div>
-                <Label htmlFor="name">Nombre de la persona o institución</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full"
-                />
-              </div>
-
-              <div>
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
@@ -346,26 +377,25 @@ const Users: React.FC = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   className="w-full"
+                  placeholder="ejemplo@correo.com"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="role">Rol</Label>
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#2B577A] focus:border-[#2B577A]"
-                >
-                  {isSuperAdmin && (
-                    <option value="Superadministrador">
-                      Superadministrador
-                    </option>
-                  )}
-                  <option value="Usuario">Usuario</option>
-                </select>
-              </div>
+              {isAdmin && (
+                <div>
+                  <Label htmlFor="role">Rol</Label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#2B577A] focus:border-[#2B577A]"
+                  >
+                    <option value="Admin">Admin</option>
+                    <option value="User">User</option>
+                  </select>
+                </div>
+              )}
 
               <div className="mt-6 flex justify-end space-x-3">
                 <Button

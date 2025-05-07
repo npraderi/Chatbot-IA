@@ -1,19 +1,17 @@
-
-import React from 'react';
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Search, CalendarIcon, ChevronDown } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Calendar } from "@/components/ui/calendar";
+import React from "react";
+import { Search } from "lucide-react";
 import { DateRange } from "react-day-picker";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-
-interface User {
-  id: string;
-  name: string;
-}
+import { es } from "date-fns/locale";
+import { User } from "@/services/authService";
 
 interface ConversationFiltersProps {
   searchTerm: string;
@@ -24,10 +22,11 @@ interface ConversationFiltersProps {
   setDate: (date: DateRange | undefined) => void;
   open: boolean;
   setOpen: (open: boolean) => void;
-  mockUsers: User[];
+  users: User[];
+  isAdmin: boolean;
 }
 
-const ConversationFilters = ({
+const ConversationFilters: React.FC<ConversationFiltersProps> = ({
   searchTerm,
   setSearchTerm,
   selectedUser,
@@ -36,101 +35,72 @@ const ConversationFilters = ({
   setDate,
   open,
   setOpen,
-  mockUsers
-}: ConversationFiltersProps) => {
+  users,
+  isAdmin,
+}) => {
   return (
-    <div className="p-4 space-y-4 border-b">
-      <div className="relative">
-        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar conversaciones..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-8"
-        />
-      </div>
-
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant={"outline"}
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !date && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {date?.from ? (
-              date.to ? (
-                <>
-                  {format(date.from, "dd/MM/yyyy")} -{" "}
-                  {format(date.to, "dd/MM/yyyy")}
-                </>
-              ) : (
-                format(date.from, "dd/MM/yyyy")
-              )
-            ) : (
-              <span>Seleccionar fecha</span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={date?.from}
-            selected={date}
-            onSelect={setDate}
-            numberOfMonths={2}
-            className={cn("p-3 pointer-events-auto")}
+    <div className="p-4 border-b">
+      <div className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+          <Input
+            placeholder="Buscar conversaciones..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
           />
-        </PopoverContent>
-      </Popover>
+        </div>
 
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            {selectedUser === "all" 
-              ? "Todos los usuarios" 
-              : selectedUser}
-            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
-          <Command>
-            <CommandInput placeholder="Buscar usuario..." />
-            <CommandEmpty>No se encontraron usuarios.</CommandEmpty>
-            <CommandList>
-              <CommandGroup>
-                <CommandItem
-                  onSelect={() => {
-                    setSelectedUser("all");
-                    setOpen(false);
-                  }}
-                >
-                  Todos los usuarios
-                </CommandItem>
-                {mockUsers.map(user => (
-                  <CommandItem
-                    key={user.id}
-                    onSelect={() => {
-                      setSelectedUser(user.name);
-                      setOpen(false);
-                    }}
-                  >
-                    {user.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+        {isAdmin && (
+          <div>
+            <select
+              value={selectedUser}
+              onChange={(e) => setSelectedUser(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#2B577A] focus:border-[#2B577A]"
+            >
+              <option value="all">Todos los usuarios</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-start text-left font-normal"
+            >
+              {date?.from ? (
+                date.to ? (
+                  <>
+                    {format(date.from, "P", { locale: es })} -{" "}
+                    {format(date.to, "P", { locale: es })}
+                  </>
+                ) : (
+                  format(date.from, "P", { locale: es })
+                )
+              ) : (
+                <span>Filtrar por fecha</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={date?.from}
+              selected={date}
+              onSelect={setDate}
+              numberOfMonths={2}
+              locale={es}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
     </div>
   );
 };

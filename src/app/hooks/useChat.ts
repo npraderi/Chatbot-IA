@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { chatService, Conversation } from "../services/chatService";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { chatService, Conversation, Message } from "../services/chatService";
 import { User } from "../services/authService";
 import { toast } from "sonner";
 
@@ -8,99 +8,252 @@ export const useChat = (currentUser: User | null) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] =
     useState<Conversation | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const loadConversations = useCallback(() => {
-    if (!currentUser) return;
+  // Usar useRef para evitar múltiples llamadas simultáneas
+  const loadingRef = useRef(false);
+
+  // Carga las conversaciones del usuario actual
+  const loadConversations = useCallback(async () => {
+    // Evitar múltiples llamadas simultáneas
+    if (!currentUser?.id || loadingRef.current) return;
+
+    loadingRef.current = true;
+    setLoading(true);
+
     try {
-      const convs = chatService.getConversations(currentUser.id);
-      setConversations(convs);
-      if (!activeConversation && convs.length) {
-        setActiveConversation(convs[0]);
+      console.log("Cargando conversaciones para usuario:", currentUser.id);
+      const convs = await chatService
+        .getConversations(currentUser.id)
+        .catch((err) => {
+          console.error("Error en getConversations:", err);
+          return [] as Conversation[];
+        });
+
+      // Validar que convs es un array
+      if (!Array.isArray(convs)) {
+        console.error("getConversations no devolvió un array:", convs);
+        setConversations([]);
+      } else {
+        setConversations(convs);
+
+        // Solo establecemos la conversación activa si no hay una seleccionada
+        // y si hay conversaciones disponibles
+        if (!activeConversation && convs.length > 0) {
+          setActiveConversation(convs[0]);
+        }
       }
-    } catch {
+
+      setIsInitialized(true);
+    } catch (error) {
+      console.error("Error al cargar conversaciones:", error);
       toast.error("Error al cargar las conversaciones");
+      setConversations([]);
+    } finally {
+      setLoading(false);
+      loadingRef.current = false;
     }
-  }, [currentUser, activeConversation]);
+  }, [currentUser?.id, activeConversation]);
 
+  // Cargar conversaciones cuando cambia el usuario
   useEffect(() => {
-    loadConversations();
-  }, [currentUser, loadConversations]);
+    let isMounted = true;
 
-  const createNewConversation = useCallback(() => {
-    if (!currentUser) return null;
-    try {
-      const newConv = chatService.createConversation(
-        currentUser.id,
-        `Conversación ${conversations.length + 1}`
-      );
-      setConversations((c) => [newConv, ...c]);
-      setActiveConversation(newConv);
-      return newConv;
-    } catch {
-      toast.error("Error al crear conversación");
+    const load = async () => {
+      if (currentUser?.id) {
+        await loadConversations();
+      } else if (isMounted) {
+        // Limpiar el estado si no hay usuario
+        setConversations([]);
+        setActiveConversation(null);
+        setIsInitialized(false);
+      }
+    };
+
+    load();
+
+    // Cleanup para evitar actualizar estado en componentes desmontados
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.id, loadConversations]);
+
+  // Crear una nueva conversación
+  const createNewConversation = useCallback(async () => {
+    if (!currentUser?.id || loadingRef.current) {
+      if (!currentUser?.id) {
+        toast.error("Debes iniciar sesión para crear una conversación");
+      }
       return null;
     }
-  }, [currentUser, conversations.length]);
 
-  const deleteConversation = useCallback(
-    (id: string) => {
-      if (!currentUser) return;
-      try {
-        chatService.deleteConversation(currentUser.id, id);
-        setConversations((c) => c.filter((x) => x.id !== id));
-        if (activeConversation?.id === id) {
-          setActiveConversation(conversations[0] || null);
-        }
-        toast.success("Conversación eliminada");
-      } catch {
-        toast.error("Error al eliminar conversación");
-      }
-    },
-    [currentUser, activeConversation, conversations]
-  );
+    loadingRef.current = true;
+    setLoading(true);
 
-  const sendMessage = useCallback(
-    async (text: string) => {
-      if (!currentUser || !activeConversation || !text.trim()) return null;
-      try {
-        // 1) Envía y renderiza YA el mensaje del usuario
-        const { conversation: convAfterUser } = chatService.sendUserMessage(
-          currentUser.id,
-          activeConversation.id,
-          text.trim()
+    try {
+      const newConv = await chatService.createConversation(currentUser.id);
+
+      if (!newConv || !newConv.id) {
+        console.error(
+          "createConversation devolvió un objeto inválido:",
+          newConv
         );
-        setActiveConversation(convAfterUser);
-        setConversations((c) => [
-          convAfterUser,
-          ...c.filter((x) => x.id !== convAfterUser.id),
-        ]);
-
-        // 2) Luego pide broma y la añade
-        const convWithBot = await chatService.sendBotResponse(
-          currentUser.id,
-          activeConversation.id
-        );
-        setActiveConversation(convWithBot);
-        setConversations((c) => [
-          convWithBot,
-          ...c.filter((x) => x.id !== convWithBot.id),
-        ]);
-
-        return { conversation: convWithBot };
-      } catch {
-        toast.error("Error al enviar mensaje");
+        toast.error("Error al crear conversación: datos inválidos");
         return null;
       }
+
+      // Actualizar el estado con la nueva conversación
+      setConversations((prevConversations) => [newConv, ...prevConversations]);
+      setActiveConversation(newConv);
+
+      return newConv;
+    } catch (error) {
+      console.error("Error al crear conversación:", error);
+      toast.error("Error al crear conversación");
+      return null;
+    } finally {
+      setLoading(false);
+      loadingRef.current = false;
+    }
+  }, [currentUser?.id]);
+
+  // Eliminar una conversación
+  const deleteConversation = useCallback(
+    async (id: string) => {
+      if (!id || !currentUser?.id || loadingRef.current) return;
+
+      loadingRef.current = true;
+      setLoading(true);
+
+      try {
+        await chatService.deleteConversation(id);
+
+        // Actualizar el estado eliminando la conversación
+        const updatedConversations = conversations.filter(
+          (conv) => conv.id !== id
+        );
+        setConversations(updatedConversations);
+
+        // Si la conversación activa es la que eliminamos, seleccionar otra
+        if (activeConversation?.id === id) {
+          const firstAvailableConversation = updatedConversations[0] || null;
+          setActiveConversation(firstAvailableConversation);
+        }
+
+        toast.success("Conversación eliminada");
+      } catch (error) {
+        console.error("Error al eliminar conversación:", error);
+        toast.error("Error al eliminar conversación");
+      } finally {
+        setLoading(false);
+        loadingRef.current = false;
+      }
     },
-    [currentUser, activeConversation]
+    [currentUser?.id, activeConversation?.id, conversations]
+  );
+
+  // Enviar un mensaje en la conversación activa
+  const sendMessage = useCallback(
+    async (text: string): Promise<boolean> => {
+      if (!currentUser?.id || !activeConversation?.id || !text.trim()) {
+        if (!text.trim()) {
+          toast.error("El mensaje no puede estar vacío");
+        }
+        if (!currentUser?.id) {
+          toast.error("Debes iniciar sesión para enviar mensajes");
+        }
+        if (!activeConversation?.id) {
+          toast.error("Selecciona una conversación");
+        }
+        return false;
+      }
+
+      // Creamos una copia local para mostrar estado inmediato
+      const messageText = text.trim();
+
+      try {
+        // Preparar el mensaje del usuario con acceso seguro a currentUser.name
+        const userName = currentUser?.name || "Usuario";
+
+        const newMessage: Omit<Message, "id"> = {
+          content: messageText,
+          timestamp: new Date(),
+          userId: currentUser.id,
+          userName: userName,
+          isUser: true,
+        };
+
+        // Añadir el mensaje del usuario a la conversación
+        await chatService
+          .addMessage(activeConversation.id, newMessage)
+          .catch((err) => {
+            console.error("Error en addMessage:", err);
+            throw err;
+          });
+
+        // Recargar la conversación para ver el mensaje del usuario
+        const updatedConversation = await chatService
+          .getConversation(activeConversation.id)
+          .catch((err) => {
+            console.error("Error en getConversation:", err);
+            return null;
+          });
+
+        if (updatedConversation) {
+          // Actualizar el estado con el mensaje del usuario
+          setActiveConversation(updatedConversation);
+          setConversations((prevConversations) => [
+            updatedConversation!,
+            ...prevConversations.filter(
+              (conv) => conv.id !== updatedConversation!.id
+            ),
+          ]);
+
+          // Obtener respuesta automática del bot
+          try {
+            const conversationWithBotResponse =
+              await chatService.sendBotResponse(activeConversation.id);
+
+            if (conversationWithBotResponse) {
+              // Actualizar el estado con la respuesta del bot
+              setActiveConversation(conversationWithBotResponse);
+              setConversations((prevConversations) => [
+                conversationWithBotResponse,
+                ...prevConversations.filter(
+                  (conv) => conv.id !== conversationWithBotResponse.id
+                ),
+              ]);
+            }
+          } catch (botError) {
+            console.error("Error al obtener respuesta del bot:", botError);
+            // No mostrar error al usuario para no interrumpir la experiencia
+          }
+
+          return true;
+        } else {
+          console.error("No se pudo obtener la conversación actualizada");
+          toast.error("Error al actualizar conversación");
+          return false;
+        }
+      } catch (error) {
+        console.error("Error al enviar mensaje:", error);
+        toast.error("Error al enviar mensaje");
+        return false;
+      }
+    },
+    [currentUser?.id, currentUser?.name, activeConversation?.id]
   );
 
   return {
     conversations,
     activeConversation,
+    loading,
+    isInitialized,
     setActiveConversation,
     createNewConversation,
     deleteConversation,
     sendMessage,
+    loadConversations,
   };
 };

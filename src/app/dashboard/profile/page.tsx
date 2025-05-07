@@ -9,19 +9,22 @@ import { toast } from "sonner";
 const Profile: React.FC = () => {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // 1) Al montar, intentamos obtener el usuario
   useEffect(() => {
-    const u = authService.getCurrentUser();
-    if (!u) {
-      // Si no hay sesión, redirigimos al login
-      router.replace("/login");
-    } else {
-      setCurrentUser(u);
-    }
+    const loadUser = async () => {
+      const user = await authService.getCurrentUser();
+      if (!user) {
+        router.replace("/dashboard/login");
+      } else {
+        setCurrentUser(user);
+      }
+      setLoading(false);
+    };
+    loadUser();
   }, [router]);
 
-  // Mientras resolvemos, no renderizamos nada
+  if (loading) return null;
   if (!currentUser) return null;
 
   const handleLogout = () => {
@@ -73,7 +76,7 @@ const Profile: React.FC = () => {
                 <p className="text-xs sm:text-sm text-gray-500">Rol</p>
                 <span
                   className={`mt-1 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    currentUser.role === "Superadministrador"
+                    currentUser.role === "Admin"
                       ? "bg-purple-100 text-purple-800"
                       : "bg-green-100 text-green-800"
                   }`}
@@ -84,8 +87,8 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* Permisos (solo si no es "Usuario") */}
-          {currentUser.role !== "Usuario" && (
+          {/* Permisos (solo si no es "User") */}
+          {currentUser.role !== "User" && (
             <div className="mb-6">
               <h2 className="text-base sm:text-lg font-semibold text-[#2B577A] mb-3">
                 Permisos
@@ -111,7 +114,7 @@ const Profile: React.FC = () => {
                   <li className="flex items-center">
                     <span
                       className={`w-3 h-3 sm:w-4 sm:h-4 mr-2 rounded-full ${
-                        currentUser.role === "Superadministrador"
+                        currentUser.role === "Admin"
                           ? "bg-[#336633]"
                           : "bg-gray-300"
                       }`}

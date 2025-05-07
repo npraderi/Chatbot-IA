@@ -2,23 +2,44 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { authService, User } from "../../services/authService";
-import { Conversation } from "../../services/chatService";
-import { MessageSquare, Plus } from "lucide-react";
+import { Conversation, chatService } from "../../services/chatService";
+import { MessageSquare, Plus, Pencil } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import ConversationList from "@/components/chat/ConversationList";
 import ConversationDetail from "@/components/chat/ConversationDetail";
 import MessageInput from "@/components/chat/MessageInput";
 import { useChat } from "@/hooks/useChat";
+import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 const Chat: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const router = useRouter();
+  const [, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
 
   useEffect(() => {
-    setCurrentUser(authService.getCurrentUser());
-  }, []);
+    const loadUser = async () => {
+      try {
+        const user = await authService.getCurrentUser();
+        if (!user) {
+          router.replace("/dashboard/login");
+          return;
+        }
+        setCurrentUser(user);
+      } catch (error) {
+        console.error("Error al cargar usuario:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadUser();
+  }, [router]);
 
   const {
     conversations,
@@ -39,19 +60,57 @@ const Chat: React.FC = () => {
     if (window.innerWidth < 768) setSidebarOpen(false);
   };
 
-  const handleSendMessage = async (msg: string) => {
-    if (!activeConversation) {
-      const newConv = createNewConversation();
-      if (newConv) {
+  const handleSendMessage = async (msg: string): Promise<boolean> => {
+    if (!currentUser) return false;
+
+    try {
+      if (!activeConversation) {
+        const newConv = await createNewConversation();
+        if (!newConv) return false;
+
         setActiveConversation(newConv);
-        const res = await sendMessage(msg);
-        if (res) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        const result = await sendMessage(msg);
+        if (result) {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          return true;
+        }
+        return false;
+      } else {
+        const result = await sendMessage(msg);
+        if (result) {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          return true;
+        }
+        return false;
       }
-    } else {
-      const res = await sendMessage(msg);
-      if (res) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    } catch (error) {
+      console.error("Error al enviar mensaje:", error);
+      toast.error("Error al enviar mensaje");
+      return false;
     }
   };
+
+  const handleTitleEdit = async () => {
+    if (!activeConversation || !newTitle.trim()) return;
+
+    try {
+      await chatService.updateConversationTitle(
+        activeConversation.id,
+        newTitle.trim()
+      );
+      setActiveConversation({
+        ...activeConversation,
+        title: newTitle.trim(),
+      });
+      setEditingTitle(false);
+    } catch (error) {
+      console.error("Error al actualizar título:", error);
+      toast.error("Error al actualizar el título");
+    }
+  };
+
+  if (loading) return null;
+  if (!currentUser) return null;
 
   return (
     <div className="h-[calc(100vh-4rem)] flex">
@@ -67,12 +126,14 @@ const Chat: React.FC = () => {
               e.stopPropagation();
               deleteConversation(id);
             }}
+            currentUserId={currentUser.id}
+            isAdmin={currentUser.role === "Admin"}
           />
         </div>
-        <div className="p-4 border-t">
+        <div className="p-4">
           <Button
             onClick={createNewConversation}
-            className="w-full bg-[#2B577A] text-white"
+            className="w-full bg-[#2B577A] text-white cursor-pointer"
           >
             <Plus className="mr-2" /> Nueva conversación
           </Button>
@@ -81,10 +142,49 @@ const Chat: React.FC = () => {
 
       {/* Chat pane */}
       <div className="flex-1 flex flex-col bg-gray-50">
-        <div className="p-4 bg-white shadow">
-          <h2 className="font-bold">
-            {activeConversation?.title || "Selecciona una conversación"}
-          </h2>
+        <div className="p-4 bg-white shadow flex items-center justify-between">
+          {editingTitle ? (
+            <div className="flex items-center gap-2 flex-1">
+              <Input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleTitleEdit();
+                  if (e.key === "Escape") setEditingTitle(false);
+                }}
+                autoFocus
+                className="flex-1"
+              />
+              <Button onClick={handleTitleEdit} variant="ghost" size="sm">
+                Guardar
+              </Button>
+              <Button
+                onClick={() => setEditingTitle(false)}
+                variant="ghost"
+                size="sm"
+              >
+                Cancelar
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-1">
+              <h2 className="font-bold">
+                {activeConversation?.title || "Selecciona una conversación"}
+              </h2>
+              {activeConversation && (
+                <Button
+                  onClick={() => {
+                    setNewTitle(activeConversation.title);
+                    setEditingTitle(true);
+                  }}
+                  variant="ghost"
+                  size="sm"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
         {activeConversation ? (
           <>
@@ -103,7 +203,7 @@ const Chat: React.FC = () => {
               <p className="mb-4">Selecciona o crea una conversación</p>
               <Button
                 onClick={createNewConversation}
-                className="bg-[#2B577A] text-white"
+                className="bg-[#2B577A] text-white cursor-pointer"
               >
                 <Plus className="mr-2" /> Nueva conversación
               </Button>

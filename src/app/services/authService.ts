@@ -1,75 +1,104 @@
 // services/authService.ts
 "use client";
 
-export type UserRole = "Superadministrador" | "Usuario";
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
+import { auth, db } from "../lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+
+export type UserRole = "Admin" | "User";
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
-  password?: string;
   fullName?: string;
 }
 
-// Usuarios de prueba
-const MOCK_USERS: User[] = [
-  {
-    id: "1",
-    name: "Admin Usuario",
-    email: "admin@example.com",
-    role: "Superadministrador",
-    password: "admin123",
-  },
-  {
-    id: "3",
-    name: "Usuario Estándar",
-    email: "user@example.com",
-    role: "Usuario",
-    password: "user123",
-  },
-];
-
 export const authService = {
   login: async (email: string, password: string): Promise<User | null> => {
-    if (typeof window === "undefined") return null;
-    // simulamos retardo
-    await new Promise((r) => setTimeout(r, 500));
-
-    const user = MOCK_USERS.find((u) => u.email === email);
-    // comprobamos existencia y que la contraseña case
-    if (!user || user.password !== password) {
-      return null;
-    }
-
-    // guardamos en localStorage
-    localStorage.setItem("currentUser", JSON.stringify(user));
-    return user;
-  },
-
-  logout: (): void => {
-    if (typeof window === "undefined") return;
-    localStorage.removeItem("currentUser");
-  },
-
-  getCurrentUser: (): User | null => {
-    if (typeof window === "undefined") return null;
-    const userJson = localStorage.getItem("currentUser");
-    if (!userJson) return null;
     try {
-      return JSON.parse(userJson) as User;
-    } catch {
-      console.error("Error parsing user data");
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const userRef = doc(db, "users", userCredential.user.uid);
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        // Si el usuario no existe en Firestore, lo creamos
+        const newUser: Omit<User, "id"> = {
+          name: "Admin Usuario",
+          email: email,
+          role: "Admin",
+        };
+        await setDoc(userRef, newUser);
+        return {
+          id: userCredential.user.uid,
+          ...newUser,
+        };
+      }
+
+      const userData = userDoc.data() as Omit<User, "id">;
+      return {
+        id: userCredential.user.uid,
+        ...userData,
+      };
+    } catch (error) {
+      console.error("Error en login:", error);
       return null;
     }
+  },
+
+  logout: async (): Promise<void> => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error en logout:", error);
+      throw error;
+    }
+  },
+
+  getCurrentUser: async (): Promise<User | null> => {
+    return new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        unsubscribe();
+
+        if (!firebaseUser) {
+          resolve(null);
+          return;
+        }
+
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (!userDoc.exists()) {
+            resolve(null);
+            return;
+          }
+
+          const userData = userDoc.data() as Omit<User, "id">;
+          resolve({
+            id: firebaseUser.uid,
+            ...userData,
+          });
+        } catch (error) {
+          console.error("Error al obtener usuario actual:", error);
+          resolve(null);
+        }
+      });
+    });
   },
 
   isAdmin: (user: User | null): boolean => {
-    return user?.role === "Superadministrador";
+    return user?.role === "Admin";
   },
 
-  // Alias para mantener compatibilidad con importaciones previas
   isSuperAdmin: (user: User | null): boolean => {
-    return user?.role === "Superadministrador";
+    return user?.role === "Admin";
   },
 };

@@ -4,17 +4,25 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 interface MessageInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string) => Promise<boolean>;
 }
 
 const MessageInput = ({ onSendMessage }: MessageInputProps) => {
   const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim()) {
-      onSendMessage(message);
-      setMessage("");
+    if (!message.trim() || isSending) return;
+
+    setIsSending(true);
+    try {
+      const success = await onSendMessage(message.trim());
+      if (success) {
+        setMessage("");
+      }
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -31,15 +39,14 @@ const MessageInput = ({ onSendMessage }: MessageInputProps) => {
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            if (message.trim()) {
-              handleSubmit(e);
-            }
+            handleSubmit(e);
           }
         }}
+        disabled={isSending}
       />
       <Button
         type="submit"
-        disabled={!message.trim()}
+        disabled={!message.trim() || isSending}
         className="bg-[#2B577A] hover:bg-[#2B577A]/90 text-white h-[50px] disabled:opacity-50"
       >
         <Send size={20} />
