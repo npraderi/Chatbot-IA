@@ -197,10 +197,10 @@ const Chat: React.FC = () => {
             <MessageInput onSendMessage={handleSendMessage} />
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500 bg-white gap-3">
+          <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 gap-3">
             <MessageSquare size={48} className="mb-2" />
             <div>
-              <p className="mb-2 bg-white">
+              <p className="mb-2 bg-gray-50 ">
                 Selecciona o crea una conversación
               </p>
               <Button

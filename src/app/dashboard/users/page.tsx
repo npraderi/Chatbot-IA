@@ -216,7 +216,7 @@ const Users: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl bg-white">
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-50 ">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-[#2B577A]">
           Gestión de Usuarios
@@ -232,7 +232,7 @@ const Users: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="bg-gray-50  shadow-md rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-[#BED1E0]">
@@ -307,7 +307,7 @@ const Users: React.FC = () => {
 
       {isModalOpen && (
         <div className="fixed bg-[#2B577A]/90 inset-0 bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md border">
+          <div className="bg-gray-50  rounded-lg p-6 w-full max-w-md border">
             <h2 className="text-xl font-bold mb-4 text-[#2B577A]">
               {currentUser ? "Editar Usuario" : "Nuevo Usuario"}
             </h2>
@@ -397,12 +397,12 @@ const Users: React.FC = () => {
                 </div>
               )}
 
-              <div className="mt-6 flex justify-end space-x-3">
+              <div className="mt-6 flex justify-end space-x-3 ">
                 <Button
                   type="button"
                   onClick={handleCloseModal}
                   variant="outline"
-                  className="bg-white border-[#BED1E0] text-[#2B577A] hover:bg-[#BED1E0] hover:text-[#2B577A] cursor-pointer"
+                  className="bg-gray-50 border-[#BED1E0] text-[#2B577A] hover:bg-[#BED1E0] hover:text-[#2B577A] cursor-pointer"
                 >
                   Cancelar
                 </Button>

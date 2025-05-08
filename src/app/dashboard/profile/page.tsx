@@ -56,7 +56,7 @@ const Profile: React.FC = () => {
             <h2 className="text-base sm:text-lg font-semibold text-[#2B577A] mb-3">
               Información de usuario
             </h2>
-            <div className="bg-gray-50 p-3 sm:p-4 rounded-md">
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-md border">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-500">Nombre</p>
@@ -93,7 +93,7 @@ const Profile: React.FC = () => {
               <h2 className="text-base sm:text-lg font-semibold text-[#2B577A] mb-3">
                 Permisos
               </h2>
-              <div className="bg-gray-50 p-3 sm:p-4 rounded-md">
+              <div className="bg-gray-50 p-3 sm:p-4 rounded-md border">
                 <ul className="space-y-2.5">
                   <li className="flex items-center">
                     <span
