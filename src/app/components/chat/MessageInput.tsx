@@ -47,7 +47,7 @@ const MessageInput = ({ onSendMessage }: MessageInputProps) => {
       <Button
         type="submit"
         disabled={!message.trim() || isSending}
-        className="bg-[#2B577A] hover:bg-[#2B577A]/90 text-white h-[50px] disabled:opacity-50"
+        className="bg-[#2B577A] hover:bg-[#2B577A]/90 cursor-pointer text-white h-[50px] disabled:opacity-50"
       >
         <Send size={20} />
       </Button>

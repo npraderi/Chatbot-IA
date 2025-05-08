@@ -43,7 +43,7 @@ const ConversationFilters: React.FC<ConversationFiltersProps> = ({
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
-              className="w-full text-gray-500 bg-white px-3 py-2 border border-gray-300 rounded-md "
+              className="w-full cursor-pointer text-gray-500 bg-white px-3 py-2 border border-gray-300 rounded-md "
             >
               <option value="all">Todos los usuarios</option>
               {users.map((user) => (

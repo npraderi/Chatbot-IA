@@ -113,9 +113,9 @@ const Chat: React.FC = () => {
   if (!currentUser) return null;
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex">
+    <div className="h-[calc(100vh-4rem)] flex pb-4">
       {/* Sidebar */}
-      <div className="w-80 bg-white shadow flex flex-col">
+      <div className="w-96 bg-white shadow flex flex-col">
         <div className="p-4 bg-[#2B577A] text-white">Conversaciones</div>
         <div className="flex-1 overflow-auto">
           <ConversationList
@@ -177,6 +177,7 @@ const Chat: React.FC = () => {
                     setNewTitle(activeConversation.title);
                     setEditingTitle(true);
                   }}
+                  className="cursor-pointer"
                   variant="ghost"
                   size="sm"
                 >

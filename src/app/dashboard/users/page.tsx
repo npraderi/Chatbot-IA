@@ -89,6 +89,12 @@ const Users: React.FC = () => {
   const isAdmin = currentLoggedUser.role === "Admin";
 
   const handleOpenModal = (user: User | null = null) => {
+    // Si el usuario actual es admin y está intentando editar otro admin
+    if (isAdmin && user?.role === "Admin" && user.id !== currentLoggedUser.id) {
+      toast.error("No puedes editar otros administradores");
+      return;
+    }
+
     if (user) {
       setFormData({
         username: user.name,
@@ -168,6 +174,17 @@ const Users: React.FC = () => {
           toast.error("No tienes permiso para cambiar el rol de usuario");
           return;
         }
+
+        // Si es admin, solo puede editar su propio perfil
+        if (
+          isAdmin &&
+          currentUser.role === "Admin" &&
+          currentUser.id !== currentLoggedUser.id
+        ) {
+          toast.error("No puedes editar otros administradores");
+          return;
+        }
+
         await userService.updateUser(currentUser.id, userData);
         toast.success("Usuario actualizado correctamente");
       } else {
@@ -224,7 +241,7 @@ const Users: React.FC = () => {
         {isAdmin && (
           <Button
             onClick={() => handleOpenModal()}
-            className="bg-[#336633] hover:bg-green-700 text-white"
+            className="bg-[#336633] hover:bg-green-700 text-white cursor-pointer"
           >
             <Plus size={18} className="mr-1" />
             Nuevo Usuario
@@ -277,14 +294,17 @@ const Users: React.FC = () => {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      onClick={() => handleOpenModal(user)}
-                      variant="ghost"
-                      size="sm"
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      <Edit size={18} />
-                    </Button>
+                    {(user.id === currentLoggedUser.id ||
+                      (isAdmin && user.role !== "Admin")) && (
+                      <Button
+                        onClick={() => handleOpenModal(user)}
+                        variant="ghost"
+                        size="sm"
+                        className="cursor-pointer text-blue-600 hover:text-blue-900"
+                      >
+                        <Edit size={18} />
+                      </Button>
+                    )}
                     {isAdmin &&
                       user.role !== "Admin" &&
                       currentLoggedUser?.id !== user.id && (
@@ -292,7 +312,7 @@ const Users: React.FC = () => {
                           onClick={() => handleDeleteUser(user.id)}
                           variant="ghost"
                           size="sm"
-                          className="text-red-600 hover:text-red-900"
+                          className="cursor-pointer text-red-600 hover:text-red-900"
                         >
                           <Trash size={18} />
                         </Button>
@@ -361,7 +381,7 @@ const Users: React.FC = () => {
                   <Button
                     type="button"
                     onClick={handleGeneratePassword}
-                    className="ml-2 bg-[#2B577A] text-white"
+                    className="ml-2 bg-[#2B577A] text-white cursor-pointer"
                   >
                     Generar
                   </Button>
@@ -382,14 +402,14 @@ const Users: React.FC = () => {
               </div>
 
               {isAdmin && (
-                <div>
+                <div className="cursor-pointer">
                   <Label htmlFor="role">Rol</Label>
                   <select
                     id="role"
                     name="role"
                     value={formData.role}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none "
+                    className="cursor-pointer w-full px-3 py-2 border  bg-white border-gray-300 rounded-md focus:outline-none "
                   >
                     <option value="Admin">Admin</option>
                     <option value="User">User</option>
@@ -402,13 +422,13 @@ const Users: React.FC = () => {
                   type="button"
                   onClick={handleCloseModal}
                   variant="outline"
-                  className="bg-gray-50 border-[#BED1E0] text-[#2B577A] hover:bg-[#BED1E0] hover:text-[#2B577A] cursor-pointer"
+                  className=" bg-gray-50 border-[#BED1E0] text-[#2B577A] hover:bg-[#BED1E0] hover:text-[#2B577A] cursor-pointer"
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-[#2B577A] hover:bg-[#2B577A]/90 cursor-pointer"
+                  className="bg-[#2B577A] hover:bg-[#2B577A]/90 cursor-pointer text-white"
                 >
                   {currentUser ? "Actualizar" : "Crear"}
                 </Button>

@@ -131,7 +131,7 @@ const Profile: React.FC = () => {
           {/* Botón de logout */}
           <button
             onClick={handleLogout}
-            className="w-full mt-4 bg-[#336633] hover:bg-[#336633]/90 text-white py-2.5 sm:py-3 px-4 rounded-md flex items-center justify-center transition-colors"
+            className="cursor-pointer w-full mt-4 bg-[#336633] hover:bg-[#336633]/90 text-white py-2.5 sm:py-3 px-4 rounded-md flex items-center justify-center transition-colors"
           >
             <LogOut size={16} className="mr-2" />
             <span className="text-sm sm:text-base">Cerrar sesión</span>
