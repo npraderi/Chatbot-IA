@@ -5,8 +5,18 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { userService } from "@/services/userService";
 import { authService, User, UserRole } from "@/services/authService";
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 
-import { User as UserIcon, Edit, Trash, Plus, Eye, EyeOff } from "lucide-react";
+import {
+  User as UserIcon,
+  Edit,
+  Trash,
+  Plus,
+  Eye,
+  EyeOff,
+  Key,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +57,14 @@ const Users: React.FC = () => {
     role: "User" as UserRole,
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [hasChanges, setHasChanges] = useState(false);
+  const [initialFormData, setInitialFormData] = useState({
+    username: "",
+    role: "User" as UserRole,
+  });
 
   const loadUsers = async () => {
     try {
@@ -96,32 +114,44 @@ const Users: React.FC = () => {
     }
 
     if (user) {
-      setFormData({
+      const newFormData = {
         username: user.name,
         password: "", // No mostramos la contraseña actual
         name: user.fullName || "",
         email: user.email,
         role: user.role,
+      };
+      setFormData(newFormData);
+      setInitialFormData({
+        username: user.name,
+        role: user.role,
       });
       setCurrentUser(user);
     } else {
-      setFormData({
+      const newFormData = {
         username: "",
         password: "",
         name: "",
         email: "",
+        role: "User",
+      };
+      setFormData(newFormData);
+      setInitialFormData({
+        username: "",
         role: "User",
       });
       setCurrentUser(null);
     }
     setShowPassword(false);
     setIsModalOpen(true);
+    setHasChanges(false);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setCurrentUser(null);
     setShowPassword(false);
+    setHasChanges(false);
   };
 
   const handleInputChange = (
@@ -129,6 +159,19 @@ const Users: React.FC = () => {
   ) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+
+    // Verificar cambios solo en campos permitidos
+    if (currentUser) {
+      if (name === "username" || name === "role") {
+        const hasChanged =
+          (name === "username" && value !== initialFormData.username) ||
+          (name === "role" && value !== initialFormData.role);
+        setHasChanges(hasChanged);
+      }
+    } else {
+      // Para nuevos usuarios, siempre habilitar el botón
+      setHasChanges(true);
+    }
   };
 
   const handleGeneratePassword = () => {
@@ -154,6 +197,18 @@ const Users: React.FC = () => {
       return false;
     }
     return true;
+  };
+
+  const handleResetPassword = async (email: string) => {
+    try {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, email);
+      setResetEmailSent((prev) => ({ ...prev, [email]: true }));
+      toast.success("Se ha enviado un correo para restablecer la contraseña");
+    } catch (error) {
+      console.error("Error al enviar correo de restablecimiento:", error);
+      toast.error("Error al enviar el correo de restablecimiento");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -349,44 +404,78 @@ const Users: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="password">
-                  Contraseña{" "}
-                  {!currentUser && <span className="text-red-500">*</span>}
-                </Label>
-                <div className="flex">
-                  <div className="relative flex-grow">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      required={!currentUser}
-                      className="w-full pr-10"
-                      placeholder="Ingrese la contraseña"
-                    />
-                    <button
+              {currentUser ? (
+                <div>
+                  <Label>Contraseña</Label>
+                  <div className="flex items-center space-x-2">
+                    <Button
                       type="button"
-                      onClick={togglePasswordVisibility}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      onClick={() => handleResetPassword(currentUser.email)}
+                      disabled={resetEmailSent[currentUser.email]}
+                      className={`w-full cursor-pointer ${
+                        resetEmailSent[currentUser.email]
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-[#2B577A] hover:bg-[#2B577A]/90"
+                      } text-white`}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400" />
+                      {resetEmailSent[currentUser.email] ? (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          Correo enviado
+                        </>
                       ) : (
-                        <Eye className="h-5 w-5 text-gray-400" />
+                        <>
+                          <Key className="h-4 w-4 mr-2" />
+                          Enviar correo para cambiar contraseña
+                        </>
                       )}
-                    </button>
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={handleGeneratePassword}
-                    className="ml-2 bg-[#2B577A] text-white cursor-pointer"
-                  >
-                    Generar
-                  </Button>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {resetEmailSent[currentUser.email]
+                      ? "El correo de restablecimiento ya fue enviado"
+                      : "Se enviará un correo al usuario para que pueda cambiar su contraseña"}
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <Label htmlFor="password">
+                    Contraseña <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="flex">
+                    <div className="relative flex-grow">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        required={!currentUser}
+                        className="w-full pr-10"
+                        placeholder="Ingrese la contraseña"
+                      />
+                      <button
+                        type="button"
+                        onClick={togglePasswordVisibility}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <Eye className="h-5 w-5 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleGeneratePassword}
+                      className="ml-2 bg-[#2B577A] text-white cursor-pointer"
+                    >
+                      Generar
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="email">Email</Label>
@@ -398,7 +487,15 @@ const Users: React.FC = () => {
                   onChange={handleInputChange}
                   className="w-full"
                   placeholder="ejemplo@correo.com"
+                  readOnly={!!currentUser}
+                  disabled={!!currentUser}
+                  title={currentUser ? "El email no puede ser modificado" : ""}
                 />
+                {currentUser && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    El email no puede ser modificado
+                  </p>
+                )}
               </div>
 
               {isAdmin && (
@@ -409,7 +506,7 @@ const Users: React.FC = () => {
                     name="role"
                     value={formData.role}
                     onChange={handleInputChange}
-                    className="cursor-pointer w-full px-3 py-2 border  bg-white border-gray-300 rounded-md focus:outline-none "
+                    className="cursor-pointer w-full px-3 py-2 border bg-white border-gray-300 rounded-md focus:outline-none"
                   >
                     <option value="Admin">Admin</option>
                     <option value="User">User</option>
@@ -417,18 +514,23 @@ const Users: React.FC = () => {
                 </div>
               )}
 
-              <div className="mt-6 flex justify-end space-x-3 ">
+              <div className="mt-6 flex justify-end space-x-3">
                 <Button
                   type="button"
                   onClick={handleCloseModal}
                   variant="outline"
-                  className=" bg-gray-50 border-[#BED1E0] text-[#2B577A] hover:bg-[#BED1E0] hover:text-[#2B577A] cursor-pointer"
+                  className="bg-gray-50 border-[#BED1E0] text-[#2B577A] hover:bg-[#BED1E0] hover:text-[#2B577A] cursor-pointer"
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-[#2B577A] hover:bg-[#2B577A]/90 cursor-pointer text-white"
+                  disabled={currentUser && !hasChanges}
+                  className={`${
+                    currentUser && !hasChanges
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-[#2B577A] hover:bg-[#2B577A]/90 cursor-pointer"
+                  } text-white`}
                 >
                   {currentUser ? "Actualizar" : "Crear"}
                 </Button>
