@@ -27,8 +27,9 @@ export default function ChatHistoryPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
 
+  // Cargar usuarios primero
   useEffect(() => {
-    const loadData = async () => {
+    const loadUsers = async () => {
       try {
         const user = await authService.getCurrentUser();
         if (!user) {
@@ -37,30 +38,52 @@ export default function ChatHistoryPage() {
         }
         setCurrentUser(user);
 
-        // Si es Admin, cargamos todos los usuarios
         if (user.role === "Admin") {
           const allUsers = await userService.getUsers();
-          setUsers(allUsers);
+          const normalUsers = allUsers.filter((u) => u.role === "User");
+          setUsers(normalUsers);
         }
-
-        // Si es Admin, cargamos todas las conversaciones
-        // Si no, solo las del usuario actual
-        const loadedConversations =
-          user.role === "Admin"
-            ? await chatService.getAllConversations()
-            : await chatService.getConversations(user.id);
-
-        console.log("Conversaciones cargadas:", loadedConversations);
-        setConversations(loadedConversations);
       } catch (error) {
-        console.error("Error al cargar datos:", error);
+        console.error("Error al cargar usuarios:", error);
+        toast.error("Error al cargar los usuarios");
+      }
+    };
+    loadUsers();
+  }, [router]);
+
+  // Cargar conversaciones después de que los usuarios estén disponibles
+  useEffect(() => {
+    const loadConversations = async () => {
+      if (!currentUser) return;
+
+      try {
+        const loadedConversations =
+          currentUser.role === "Admin"
+            ? await chatService.getAllConversations()
+            : await chatService.getConversations(currentUser.id);
+
+        // Filtrar conversaciones de admin si el usuario actual es admin
+        const filteredConversations =
+          currentUser.role === "Admin"
+            ? loadedConversations.filter((conv) => {
+                const conversationUser = users.find(
+                  (u) => u.id === conv.userId
+                );
+                return conversationUser?.role === "User";
+              })
+            : loadedConversations;
+
+        setConversations(filteredConversations);
+      } catch (error) {
+        console.error("Error al cargar conversaciones:", error);
         toast.error("Error al cargar el historial");
       } finally {
         setLoading(false);
       }
     };
-    loadData();
-  }, [router]);
+
+    loadConversations();
+  }, [currentUser, users]);
 
   if (loading) return null;
   if (!currentUser) return null;
@@ -78,15 +101,6 @@ export default function ChatHistoryPage() {
       ? true
       : conv.lastMessageDate >= date.from &&
         (!date.to || conv.lastMessageDate <= date.to);
-
-    console.log("Filtrado de conversaciones:", {
-      convId: conv.id,
-      convUserId: conv.userId,
-      selectedUser,
-      matchesUser,
-      matchesSearch,
-      matchesDate,
-    });
 
     return matchesSearch && matchesUser && matchesDate;
   });
