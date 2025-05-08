@@ -30,7 +30,7 @@ export default function DashboardLayout({
   }, [pathname]);
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-white">
       <main className="flex-1 overflow-auto">{children}</main>
       {currentUser && <Navigation />}
     </div>

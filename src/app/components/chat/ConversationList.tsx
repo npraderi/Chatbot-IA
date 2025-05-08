@@ -35,14 +35,14 @@ const ConversationList: React.FC<ConversationListProps> = ({
             <div
               key={conv.id}
               onClick={() => onSelectConversation(conv)}
-              className={`p-3 border-b cursor-pointer flex justify-between items-center ${
+              className={`p-3 text-gray-500 border-b cursor-pointer flex justify-between items-center ${
                 activeConversation?.id === conv.id
                   ? "bg-[#BED1E0]/30"
                   : "hover:bg-gray-50"
               }`}
             >
-              <div className="flex items-center flex-grow">
-                <div className="w-10 h-10 rounded-full bg-[#2B577A] flex items-center justify-center">
+              <div className="flex items-center flex-grow text-gray-500">
+                <div className="w-10 h-10 rounded-full bg-[#2B577A] flex items-center justify-center ">
                   <MessageSquare size={18} className="text-white" />
                 </div>
                 <div className="ml-3 flex-grow">

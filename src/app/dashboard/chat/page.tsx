@@ -144,7 +144,7 @@ const Chat: React.FC = () => {
       <div className="flex-1 flex flex-col bg-gray-50">
         <div className="p-4 bg-white shadow flex items-center justify-between">
           {editingTitle ? (
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-1 text-gray-500">
               <Input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
@@ -167,7 +167,7 @@ const Chat: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-1 text-gray-500">
               <h2 className="font-bold">
                 {activeConversation?.title || "Selecciona una conversación"}
               </h2>
@@ -197,10 +197,12 @@ const Chat: React.FC = () => {
             <MessageInput onSendMessage={handleSendMessage} />
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            <MessageSquare size={48} className="mb-4" />
+          <div className="flex-1 flex items-center justify-center text-gray-500 bg-white gap-3">
+            <MessageSquare size={48} className="mb-2" />
             <div>
-              <p className="mb-4">Selecciona o crea una conversación</p>
+              <p className="mb-2 bg-white">
+                Selecciona o crea una conversación
+              </p>
               <Button
                 onClick={createNewConversation}
                 className="bg-[#2B577A] text-white cursor-pointer"

@@ -216,7 +216,7 @@ const Users: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
+    <div className="container mx-auto p-4 max-w-4xl bg-white">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-[#2B577A]">
           Gestión de Usuarios
@@ -306,8 +306,8 @@ const Users: React.FC = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed bg-[#2B577A]/90 inset-0 bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md border">
             <h2 className="text-xl font-bold mb-4 text-[#2B577A]">
               {currentUser ? "Editar Usuario" : "Nuevo Usuario"}
             </h2>
@@ -389,7 +389,7 @@ const Users: React.FC = () => {
                     name="role"
                     value={formData.role}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#2B577A] focus:border-[#2B577A]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none "
                   >
                     <option value="Admin">Admin</option>
                     <option value="User">User</option>
@@ -402,12 +402,13 @@ const Users: React.FC = () => {
                   type="button"
                   onClick={handleCloseModal}
                   variant="outline"
+                  className="bg-white border-[#BED1E0] text-[#2B577A] hover:bg-[#BED1E0] hover:text-[#2B577A] cursor-pointer"
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-[#2B577A] hover:bg-blue-700"
+                  className="bg-[#2B577A] hover:bg-[#2B577A]/90 cursor-pointer"
                 >
                   {currentUser ? "Actualizar" : "Crear"}
                 </Button>

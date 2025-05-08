@@ -7,7 +7,7 @@ interface MessageProps {
 const Message = ({ message }: MessageProps) => {
   return (
     <div
-      className={`flex ${
+      className={`flex  ${
         message.isUser ? "justify-end" : "justify-start"
       } mb-4`}
     >

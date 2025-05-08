@@ -79,7 +79,7 @@ const Login: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={`block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400
-                focus:outline-none focus:ring-[#2B577A] focus:border-[#2B577A]
+             
                 ${errors.email ? "border-red-300" : "border-gray-300"}`}
               placeholder="correo@ejemplo.com"
             />
@@ -102,7 +102,7 @@ const Login: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={`block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400
-                focus:outline-none focus:ring-[#2B577A] focus:border-[#2B577A]
+
                 ${errors.password ? "border-red-300" : "border-gray-300"}`}
             />
             {errors.password && (
@@ -115,7 +115,7 @@ const Login: React.FC = () => {
             type="submit"
             disabled={loading}
             className="w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-[#2B577A]
-              hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2B577A]
+              hover:bg-blue-700
               disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Iniciando sesión..." : "Iniciar sesión"}

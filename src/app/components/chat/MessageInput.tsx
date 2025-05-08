@@ -35,7 +35,7 @@ const MessageInput = ({ onSendMessage }: MessageInputProps) => {
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         placeholder="Escribe un mensaje..."
-        className="flex-grow min-h-[50px] max-h-[150px] resize-none rounded-lg border-gray-300 focus:border-[#2B577A] focus:ring-1 focus:ring-[#2B577A]"
+        className="flex-grow min-h-[50px] bg-white text-gray-500 max-h-[150px] resize-none rounded-lg border-gray-300 "
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();

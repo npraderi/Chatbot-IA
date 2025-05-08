@@ -26,7 +26,7 @@ const ConversationFilters: React.FC<ConversationFiltersProps> = ({
   isAdmin,
 }) => {
   return (
-    <div className="p-4 border-b">
+    <div className="p-4 border-b ">
       <div className="space-y-4">
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
@@ -43,7 +43,7 @@ const ConversationFilters: React.FC<ConversationFiltersProps> = ({
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#2B577A] focus:border-[#2B577A]"
+              className="w-full text-gray-500 bg-white px-3 py-2 border border-gray-300 rounded-md "
             >
               <option value="all">Todos los usuarios</option>
               {users.map((user) => (

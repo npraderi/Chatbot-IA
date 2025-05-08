@@ -40,7 +40,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Escribe un mensaje..."
-          className="flex-1 min-h-[40px] max-h-[120px] p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-[#2B577A]"
+          className="flex-1 min-h-[40px] max-h-[120px] p-2 border rounded-md resize-none"
           disabled={isSending}
         />
         <Button

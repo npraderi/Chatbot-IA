@@ -12,7 +12,7 @@ const ConversationDetail: React.FC<ConversationDetailProps> = ({
 }) => {
   if (!conversation) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-500">
+      <div className="h-full flex items-center justify-center text-gray-500 ">
         Selecciona una conversación para ver su historial
       </div>
     );

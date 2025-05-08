@@ -158,9 +158,9 @@ export default function ChatHistoryPage() {
           />
         </div>
 
-        <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
-          <div className="bg-white p-4 shadow-sm">
-            <h2 className="font-bold">
+        <div className="flex-1 flex flex-col text-gray-500 bg-gray-50 overflow-hidden">
+          <div className="bg-white p-4 shadow-sm text-gray-500">
+            <h2 className="font-bold text-gray-500">
               {activeConversation
                 ? `Conversación ${activeConversation.id}`
                 : "Selecciona una conversación para ver su historial"}
