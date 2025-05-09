@@ -10,6 +10,8 @@ import { authService, User } from "@/services/authService";
 import { chatService } from "@/services/chatService";
 import { userService } from "@/services/userService";
 import { useRouter } from "next/navigation";
+import { LoadingWrapper } from "@/components/ui/LoadingWrapper";
+import { Spinner } from "@/components/ui/Spinner";
 
 export default function ChatHistoryPage() {
   const router = useRouter();
@@ -85,7 +87,13 @@ export default function ChatHistoryPage() {
     loadConversations();
   }, [currentUser, users]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <LoadingWrapper isLoading={true} className="h-screen">
+        <Spinner size="lg" />
+      </LoadingWrapper>
+    );
+  }
   if (!currentUser) return null;
 
   const filteredConversations = conversations.filter((conv) => {

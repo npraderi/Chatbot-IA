@@ -13,6 +13,9 @@ import { useChat } from "@/hooks/useChat";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { LoadingWrapper } from "@/components/ui/LoadingWrapper";
+import { Spinner } from "@/components/ui/Spinner";
+import { ResponsePlaceholder } from "../../components/chat/ResponsePlaceholder";
 
 const Chat: React.FC = () => {
   const router = useRouter();
@@ -48,6 +51,8 @@ const Chat: React.FC = () => {
     createNewConversation,
     deleteConversation,
     sendMessage,
+    loading: chatLoading,
+    isBotResponding,
   } = useChat(currentUser);
 
   useEffect(() => {
@@ -109,7 +114,13 @@ const Chat: React.FC = () => {
     }
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <LoadingWrapper isLoading={true} className="h-screen">
+        <Spinner size="lg" />
+      </LoadingWrapper>
+    );
+  }
   if (!currentUser) return null;
 
   return (
@@ -155,10 +166,16 @@ const Chat: React.FC = () => {
                 autoFocus
                 className="flex-1"
               />
-              <Button onClick={handleTitleEdit} variant="ghost" size="sm">
+              <Button
+                className="cursor-pointer hover:bg-gray-200 hover:text-black"
+                onClick={handleTitleEdit}
+                variant="ghost"
+                size="sm"
+              >
                 Guardar
               </Button>
               <Button
+                className="cursor-pointer hover:bg-gray-200 hover:text-black"
                 onClick={() => setEditingTitle(false)}
                 variant="ghost"
                 size="sm"
@@ -168,40 +185,43 @@ const Chat: React.FC = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2 flex-1 text-gray-500">
-              <h2 className="font-bold">
-                {activeConversation?.title || "Selecciona una conversación"}
-              </h2>
-              {activeConversation && (
-                <Button
-                  onClick={() => {
-                    setNewTitle(activeConversation.title);
-                    setEditingTitle(true);
-                  }}
-                  className="cursor-pointer"
-                  variant="ghost"
-                  size="sm"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+              {chatLoading && !activeConversation ? (
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Cargando...</span>
+                </div>
+              ) : (
+                <>
+                  <h2 className="font-bold">
+                    {activeConversation?.title || "Selecciona una conversación"}
+                  </h2>
+                  {activeConversation && (
+                    <Button
+                      onClick={() => {
+                        setNewTitle(activeConversation.title);
+                        setEditingTitle(true);
+                      }}
+                      className="cursor-pointer"
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           )}
         </div>
-        {activeConversation ? (
-          <>
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-4">
-                <ConversationDetail conversation={activeConversation} />
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-            <MessageInput onSendMessage={handleSendMessage} />
-          </>
-        ) : (
+        {chatLoading && !activeConversation ? (
+          <div className="flex-1 flex items-center justify-center">
+            <Spinner size="lg" />
+          </div>
+        ) : !activeConversation ? (
           <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 gap-3">
             <MessageSquare size={48} className="mb-2" />
             <div>
-              <p className="mb-2 bg-gray-50 ">
+              <p className="mb-2 bg-gray-50">
                 Selecciona o crea una conversación
               </p>
               <Button
@@ -212,6 +232,17 @@ const Chat: React.FC = () => {
               </Button>
             </div>
           </div>
+        ) : (
+          <>
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-4">
+                <ConversationDetail conversation={activeConversation} />
+                {isBotResponding && <ResponsePlaceholder />}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+            <MessageInput onSendMessage={handleSendMessage} />
+          </>
         )}
       </div>
     </div>

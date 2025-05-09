@@ -5,7 +5,11 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { userService } from "@/services/userService";
 import { authService, User, UserRole } from "@/services/authService";
-import { getAuth, sendPasswordResetEmail } from "firebase/auth";
+import {
+  getAuth,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 
 import {
   User as UserIcon,
@@ -29,6 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { Spinner } from "@/components/ui/Spinner";
 
 const generateRandomPassword = () => {
   const length = 8;
@@ -61,6 +66,7 @@ const Users: React.FC = () => {
     [key: string]: boolean;
   }>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [initialFormData, setInitialFormData] = useState({
     username: "",
     role: "User" as UserRole,
@@ -100,7 +106,13 @@ const Users: React.FC = () => {
     loadData();
   }, [router]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
   if (!currentLoggedUser) return null;
 
   // Verificar si el usuario actual es Admin
@@ -113,18 +125,24 @@ const Users: React.FC = () => {
       return;
     }
 
+    // Si no es admin, solo puede editar su propio perfil
+    if (!isAdmin && user && user.id !== currentLoggedUser.id) {
+      toast.error("Solo puedes editar tu propio perfil");
+      return;
+    }
+
     if (user) {
       const newFormData = {
         username: user.name,
         password: "", // No mostramos la contraseña actual
         name: user.fullName || "",
         email: user.email,
-        role: user.role,
+        role: user.role as UserRole,
       };
       setFormData(newFormData);
       setInitialFormData({
         username: user.name,
-        role: user.role,
+        role: user.role as UserRole,
       });
       setCurrentUser(user);
     } else {
@@ -133,12 +151,12 @@ const Users: React.FC = () => {
         password: "",
         name: "",
         email: "",
-        role: "User",
+        role: "User" as UserRole,
       };
       setFormData(newFormData);
       setInitialFormData({
         username: "",
-        role: "User",
+        role: "User" as UserRole,
       });
       setCurrentUser(null);
     }
@@ -216,6 +234,7 @@ const Users: React.FC = () => {
 
     if (!validateForm()) return;
 
+    setIsSubmitting(true);
     try {
       if (currentUser) {
         const userData: Partial<User> = {
@@ -260,6 +279,8 @@ const Users: React.FC = () => {
       toast.error(
         err instanceof Error ? err.message : "Error al procesar el usuario"
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -276,6 +297,30 @@ const Users: React.FC = () => {
     }
 
     try {
+      // Primero eliminamos el usuario de Firebase Auth
+      const auth = getAuth();
+      if (userToDelete?.email) {
+        try {
+          // Obtenemos el usuario de Firebase Auth por email
+          const userCredential = await signInWithEmailAndPassword(
+            auth,
+            userToDelete.email,
+            "temporaryPassword123" // Contraseña temporal
+          );
+          const firebaseUser = userCredential.user;
+
+          if (firebaseUser) {
+            // Eliminamos el usuario de Firebase Auth
+            await firebaseUser.delete();
+          }
+        } catch (error) {
+          console.error("Error al eliminar usuario de Firebase Auth:", error);
+          // Si falla, intentamos enviar un correo de restablecimiento
+          await sendPasswordResetEmail(auth, userToDelete.email);
+        }
+      }
+
+      // Luego eliminamos el usuario de Firestore
       await userService.deleteUser(userId);
       toast.success("Usuario eliminado correctamente");
       await loadUsers();
@@ -519,20 +564,30 @@ const Users: React.FC = () => {
                   type="button"
                   onClick={handleCloseModal}
                   variant="outline"
+                  disabled={isSubmitting}
                   className="bg-gray-50 border-[#BED1E0] text-[#2B577A] hover:bg-[#BED1E0] hover:text-[#2B577A] cursor-pointer"
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
-                  disabled={currentUser && !hasChanges}
+                  disabled={(!!currentUser && !hasChanges) || isSubmitting}
                   className={`${
-                    currentUser && !hasChanges
+                    (!!currentUser && !hasChanges) || isSubmitting
                       ? "bg-gray-400 cursor-not-allowed"
                       : "bg-[#2B577A] hover:bg-[#2B577A]/90 cursor-pointer"
                   } text-white`}
                 >
-                  {currentUser ? "Actualizar" : "Crear"}
+                  {isSubmitting ? (
+                    <div className="flex items-center">
+                      <Spinner size="sm" className="mr-2" />
+                      {currentUser ? "Actualizando..." : "Creando..."}
+                    </div>
+                  ) : currentUser ? (
+                    "Actualizar"
+                  ) : (
+                    "Crear"
+                  )}
                 </Button>
               </div>
             </form>

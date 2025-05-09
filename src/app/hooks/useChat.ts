@@ -8,8 +8,9 @@ export const useChat = (currentUser: User | null) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] =
     useState<Conversation | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isBotResponding, setIsBotResponding] = useState(false);
 
   // Usar useRef para evitar múltiples llamadas simultáneas
   const loadingRef = useRef(false);
@@ -169,14 +170,13 @@ export const useChat = (currentUser: User | null) => {
         return false;
       }
 
-      // Creamos una copia local para mostrar estado inmediato
       const messageText = text.trim();
 
       try {
-        // Preparar el mensaje del usuario con acceso seguro a currentUser.name
         const userName = currentUser?.name || "Usuario";
 
-        const newMessage: Omit<Message, "id"> = {
+        const newMessage: Message = {
+          id: `temp-${Date.now()}`,
           content: messageText,
           timestamp: new Date(),
           userId: currentUser.id,
@@ -184,65 +184,63 @@ export const useChat = (currentUser: User | null) => {
           isUser: true,
         };
 
-        // Añadir el mensaje del usuario a la conversación
-        await chatService
-          .addMessage(activeConversation.id, newMessage)
-          .catch((err) => {
-            console.error("Error en addMessage:", err);
-            throw err;
+        // Actualizar la UI inmediatamente con el mensaje del usuario
+        const updatedConversation = {
+          ...activeConversation,
+          messages: [...activeConversation.messages, newMessage],
+          lastMessageDate: new Date(),
+        };
+
+        setActiveConversation(updatedConversation);
+        setConversations((prevConversations) => [
+          updatedConversation,
+          ...prevConversations.filter(
+            (conv) => conv.id !== updatedConversation.id
+          ),
+        ]);
+
+        // Indicar que el bot está respondiendo
+        setIsBotResponding(true);
+
+        // Enviar el mensaje al backend en segundo plano
+        try {
+          await chatService.addMessage(activeConversation.id, {
+            content: messageText,
+            timestamp: new Date(),
+            userId: currentUser.id,
+            userName: userName,
+            isUser: true,
           });
 
-        // Recargar la conversación para ver el mensaje del usuario
-        const updatedConversation = await chatService
-          .getConversation(activeConversation.id)
-          .catch((err) => {
-            console.error("Error en getConversation:", err);
-            return null;
-          });
+          // Obtener respuesta del bot
+          const conversationWithBotResponse = await chatService.sendBotResponse(
+            activeConversation.id
+          );
 
-        if (updatedConversation) {
-          // Actualizar el estado con el mensaje del usuario
-          setActiveConversation(updatedConversation);
-          setConversations((prevConversations) => [
-            updatedConversation!,
-            ...prevConversations.filter(
-              (conv) => conv.id !== updatedConversation!.id
-            ),
-          ]);
-
-          // Obtener respuesta automática del bot
-          try {
-            const conversationWithBotResponse =
-              await chatService.sendBotResponse(activeConversation.id);
-
-            if (conversationWithBotResponse) {
-              // Actualizar el estado con la respuesta del bot
-              setActiveConversation(conversationWithBotResponse);
-              setConversations((prevConversations) => [
-                conversationWithBotResponse,
-                ...prevConversations.filter(
-                  (conv) => conv.id !== conversationWithBotResponse.id
-                ),
-              ]);
-            }
-          } catch (botError) {
-            console.error("Error al obtener respuesta del bot:", botError);
-            // No mostrar error al usuario para no interrumpir la experiencia
+          if (conversationWithBotResponse) {
+            setActiveConversation(conversationWithBotResponse);
+            setConversations((prevConversations) => [
+              conversationWithBotResponse,
+              ...prevConversations.filter(
+                (conv) => conv.id !== conversationWithBotResponse.id
+              ),
+            ]);
           }
-
-          return true;
-        } else {
-          console.error("No se pudo obtener la conversación actualizada");
-          toast.error("Error al actualizar conversación");
-          return false;
+        } catch (error) {
+          console.error("Error al procesar mensaje:", error);
+          toast.error("Error al procesar el mensaje");
+        } finally {
+          setIsBotResponding(false);
         }
+
+        return true;
       } catch (error) {
         console.error("Error al enviar mensaje:", error);
         toast.error("Error al enviar mensaje");
         return false;
       }
     },
-    [currentUser?.id, currentUser?.name, activeConversation?.id]
+    [currentUser?.id, currentUser?.name, activeConversation]
   );
 
   return {
@@ -250,6 +248,7 @@ export const useChat = (currentUser: User | null) => {
     activeConversation,
     loading,
     isInitialized,
+    isBotResponding,
     setActiveConversation,
     createNewConversation,
     deleteConversation,
