@@ -5,11 +5,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { userService } from "@/services/userService";
 import { authService, User, UserRole } from "@/services/authService";
-import {
-  getAuth,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 
 import {
   User as UserIcon,
@@ -296,32 +292,20 @@ const Users: React.FC = () => {
       return;
     }
 
+    // Mostrar confirmación antes de eliminar
+    if (
+      !confirm(
+        `¿Estás seguro de eliminar al usuario ${userToDelete?.name}? Esta acción no se puede deshacer.`
+      )
+    ) {
+      return;
+    }
+
     try {
-      // Primero eliminamos el usuario de Firebase Auth
-      const auth = getAuth();
-      if (userToDelete?.email) {
-        try {
-          // Obtenemos el usuario de Firebase Auth por email
-          const userCredential = await signInWithEmailAndPassword(
-            auth,
-            userToDelete.email,
-            "temporaryPassword123" // Contraseña temporal
-          );
-          const firebaseUser = userCredential.user;
+      // Usamos el método de eliminación completa que intentará eliminar
+      // tanto el usuario de Firestore como el de Firebase Auth
+      await userService.deleteUserCompletely(userId);
 
-          if (firebaseUser) {
-            // Eliminamos el usuario de Firebase Auth
-            await firebaseUser.delete();
-          }
-        } catch (error) {
-          console.error("Error al eliminar usuario de Firebase Auth:", error);
-          // Si falla, intentamos enviar un correo de restablecimiento
-          await sendPasswordResetEmail(auth, userToDelete.email);
-        }
-      }
-
-      // Luego eliminamos el usuario de Firestore
-      await userService.deleteUser(userId);
       toast.success("Usuario eliminado correctamente");
       await loadUsers();
     } catch (err) {
@@ -394,29 +378,33 @@ const Users: React.FC = () => {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    {(user.id === currentLoggedUser.id ||
-                      (isAdmin && user.role !== "Admin")) && (
-                      <Button
-                        onClick={() => handleOpenModal(user)}
-                        variant="ghost"
-                        size="sm"
-                        className="cursor-pointer text-blue-600 hover:text-blue-900"
-                      >
-                        <Edit size={18} />
-                      </Button>
-                    )}
-                    {isAdmin &&
-                      user.role !== "Admin" &&
-                      currentLoggedUser?.id !== user.id && (
+                    <div className="flex justify-end space-x-1">
+                      {(user.id === currentLoggedUser.id ||
+                        (isAdmin && user.role !== "Admin")) && (
                         <Button
-                          onClick={() => handleDeleteUser(user.id)}
+                          onClick={() => handleOpenModal(user)}
                           variant="ghost"
                           size="sm"
-                          className="cursor-pointer text-red-600 hover:text-red-900"
+                          className="cursor-pointer text-blue-600 hover:text-blue-900"
+                          title="Editar usuario"
                         >
-                          <Trash size={18} />
+                          <Edit size={18} />
                         </Button>
                       )}
+                      {isAdmin &&
+                        user.role !== "Admin" &&
+                        user.id !== currentLoggedUser.id && (
+                          <Button
+                            onClick={() => handleDeleteUser(user.id)}
+                            variant="ghost"
+                            size="sm"
+                            className="cursor-pointer text-red-600 hover:text-red-900"
+                            title="Eliminar usuario"
+                          >
+                            <Trash size={18} />
+                          </Button>
+                        )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
