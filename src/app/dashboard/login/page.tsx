@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { authService } from "@/services/authService";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const Login: React.FC = () => {
   const router = useRouter();
@@ -55,11 +56,20 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#BED1E0] to-white p-4">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold text-[#2B577A] text-center">
-          ChatBot Ladamerica
-        </h1>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#BED1E0] to-white p-4 relative">
+      <div className="w-full max-w-md p-8 flex flex-col gap-3	 rounded-lg shadow-lg bg-white">
+        <div className="flex items-center justify-center gap-3 flex-col ">
+          <h1 className="text-3xl font-bold text-[#2B577A] bg-blue pr-1">
+            Chatbot
+          </h1>
+          <Image
+            src="/LogoLadamerica.png"
+            alt="Ladamerica Logo"
+            width={200}
+            height={100}
+            priority
+          />
+        </div>
         <p className="text-center text-sm text-gray-600">
           Inicia sesión en tu cuenta
         </p>
@@ -114,7 +124,7 @@ const Login: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-[#2B577A]
+            className=" cursor-pointer w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-[#2B577A]
               hover:bg-blue-700
               disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -122,6 +132,25 @@ const Login: React.FC = () => {
           </button>
         </form>
       </div>
+
+      <a
+        href="https://www.tribu.com.uy/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="cursor-pointer flex"
+      >
+        <div className="absolute bottom-4 right-4 flex items-center">
+          <span className="text-xs text-gray-600 mr-2">powered by</span>
+
+          <Image
+            src="/LogoTribu-Black.png"
+            alt="Tribu Logo"
+            width={80}
+            height={30}
+            priority
+          />
+        </div>
+      </a>
     </div>
   );
 };

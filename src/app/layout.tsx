@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "ChatBot Ladamerica",
-  description: "ChatBot inteligente para Ladamerica",
+  title: "Chatbot Ladamerica",
+  description: "Chatbot inteligente para Ladamerica",
 };
 
 export default function RootLayout({
