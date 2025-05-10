@@ -138,7 +138,10 @@ const Chat: React.FC = () => {
               deleteConversation(id);
             }}
             currentUserId={currentUser.id}
-            isAdmin={currentUser.role === "Admin"}
+            isAdmin={
+              currentUser.role === "Admin" || currentUser.role === "SuperAdmin"
+            }
+            userRole={currentUser.role}
           />
         </div>
         <div className="p-4">

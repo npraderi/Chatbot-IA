@@ -74,7 +74,7 @@ export const chatService = {
         };
       });
 
-      // Filtrar conversaciones por tiempo de creación (solo últimas 24h) para usuarios normales
+      // Filtrar conversaciones por tiempo de creación (solo últimas 24h) ÚNICAMENTE para usuarios normales
       if (role === "User") {
         const now = new Date();
         const yesterday = new Date(now);
@@ -84,6 +84,7 @@ export const chatService = {
           (conv) => conv.createdAt && conv.createdAt > yesterday
         );
       }
+      // Los Admin y SuperAdmin ven todas las conversaciones sin filtro de tiempo
 
       // Ordenar las conversaciones por fecha del último mensaje
       conversations.sort(

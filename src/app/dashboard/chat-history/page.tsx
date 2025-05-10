@@ -179,7 +179,10 @@ export default function ChatHistoryPage() {
             onSelectConversation={setActiveConversation}
             onDeleteConversation={handleDeleteConversation}
             currentUserId={currentUser.id}
-            isAdmin={currentUser.role === "Admin"}
+            isAdmin={
+              currentUser.role === "Admin" || currentUser.role === "SuperAdmin"
+            }
+            userRole={currentUser.role}
           />
         </div>
 

@@ -400,7 +400,7 @@ const Users: React.FC = () => {
         {isAdmin && (
           <Button
             onClick={() => handleOpenModal()}
-            className="bg-[#336633] hover:bg-green-700 text-white cursor-pointer"
+            className="bg-[#2B577A] hover:bg-[#2B577A]/90 text-white cursor-pointer"
           >
             <Plus size={18} className="mr-1" />
             Nuevo Usuario

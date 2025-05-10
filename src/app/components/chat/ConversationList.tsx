@@ -13,6 +13,7 @@ interface ConversationListProps {
   onDeleteConversation: (e: React.MouseEvent, conversationId: string) => void;
   currentUserId: string;
   isAdmin: boolean;
+  userRole: string;
 }
 
 const ConversationList: React.FC<ConversationListProps> = ({
@@ -22,6 +23,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   onDeleteConversation,
   currentUserId,
   isAdmin,
+  userRole,
 }) => {
   const formatDate = (date: Date) => {
     return format(date, "Pp", { locale: es });
@@ -56,7 +58,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                       ? conv.messages[conv.messages.length - 1].content
                       : "Nueva conversación"}
                   </div>
-                  {!isAdmin && (
+                  {userRole === "User" && (
                     <div className="text-xs text-gray-400 flex items-center mt-1">
                       <Clock size={12} className="mr-1" />
                       <span>
