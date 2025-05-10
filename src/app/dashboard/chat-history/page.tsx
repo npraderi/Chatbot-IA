@@ -62,7 +62,10 @@ export default function ChatHistoryPage() {
         const loadedConversations =
           currentUser.role === "Admin"
             ? await chatService.getAllConversations()
-            : await chatService.getConversations(currentUser.id);
+            : await chatService.getConversations(
+                currentUser.id,
+                currentUser.role
+              );
 
         // Filtrar conversaciones de admin si el usuario actual es admin
         const filteredConversations =

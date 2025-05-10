@@ -1,9 +1,9 @@
 import React from "react";
 import { Conversation } from "@/services/chatService";
-import { MessageSquare, Trash2 } from "lucide-react";
+import { MessageSquare, Trash2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface ConversationListProps {
@@ -25,6 +25,10 @@ const ConversationList: React.FC<ConversationListProps> = ({
 }) => {
   const formatDate = (date: Date) => {
     return format(date, "Pp", { locale: es });
+  };
+
+  const getExpirationDate = (createdAt: Date) => {
+    return addDays(new Date(createdAt), 1);
   };
 
   return (
@@ -52,6 +56,15 @@ const ConversationList: React.FC<ConversationListProps> = ({
                       ? conv.messages[conv.messages.length - 1].content
                       : "Nueva conversación"}
                   </div>
+                  {!isAdmin && (
+                    <div className="text-xs text-gray-400 flex items-center mt-1">
+                      <Clock size={12} className="mr-1" />
+                      <span>
+                        Se eliminará el{" "}
+                        {formatDate(getExpirationDate(conv.createdAt))}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col items-end">

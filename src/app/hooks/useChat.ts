@@ -26,7 +26,7 @@ export const useChat = (currentUser: User | null) => {
     try {
       console.log("Cargando conversaciones para usuario:", currentUser.id);
       const convs = await chatService
-        .getConversations(currentUser.id)
+        .getConversations(currentUser.id, currentUser.role)
         .catch((err) => {
           console.error("Error en getConversations:", err);
           return [] as Conversation[];
@@ -55,7 +55,7 @@ export const useChat = (currentUser: User | null) => {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [currentUser?.id, activeConversation]);
+  }, [currentUser?.id, currentUser?.role, activeConversation]);
 
   // Cargar conversaciones cuando cambia el usuario
   useEffect(() => {

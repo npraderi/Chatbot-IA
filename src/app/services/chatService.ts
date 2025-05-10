@@ -47,13 +47,16 @@ export class ChatServiceError extends Error implements AppError {
 }
 
 export const chatService = {
-  async getConversations(userId: string): Promise<Conversation[]> {
+  async getConversations(
+    userId: string,
+    role: string = "User"
+  ): Promise<Conversation[]> {
     try {
       const conversationsRef = collection(db, "conversations");
       const q = query(conversationsRef, where("userId", "==", userId));
 
       const querySnapshot = await getDocs(q);
-      const conversations = querySnapshot.docs.map((doc) => {
+      let conversations = querySnapshot.docs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -70,6 +73,17 @@ export const chatService = {
               : new Date(data.createdAt),
         };
       });
+
+      // Filtrar conversaciones por tiempo de creación (solo últimas 24h) para usuarios normales
+      if (role === "User") {
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1); // 24 horas atrás
+
+        conversations = conversations.filter(
+          (conv) => conv.createdAt && conv.createdAt > yesterday
+        );
+      }
 
       // Ordenar las conversaciones por fecha del último mensaje
       conversations.sort(
