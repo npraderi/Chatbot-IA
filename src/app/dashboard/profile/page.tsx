@@ -46,7 +46,7 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-2xl">
+    <div className="container mx-auto px-4 py-6 pb-24 max-w-2xl">
       <Card className="overflow-hidden">
         {/* Header */}
         <div className="bg-[#2B577A] p-4 sm:p-6 flex flex-col items-center">
