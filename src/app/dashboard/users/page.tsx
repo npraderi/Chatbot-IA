@@ -246,12 +246,37 @@ const Users: React.FC = () => {
         const userData: Partial<User> = {
           name: formData.username.trim(),
           email: formData.email.trim(),
-          role: formData.role,
         };
 
-        // No permitir cambiar el rol si no es Admin
-        if (!isAdmin && userData.role !== currentUser.role) {
+        // Solo SuperAdmin puede cambiar el rol (excepto a SuperAdmin)
+        if (isSuperAdmin && currentUser.id !== currentLoggedUser.id) {
+          // Validar que no se esté intentando asignar rol SuperAdmin
+          if (
+            formData.role === "SuperAdmin" &&
+            currentUser.role !== "SuperAdmin"
+          ) {
+            toast.error(
+              "No se puede asignar el rol de SuperAdmin a ningún usuario"
+            );
+            setIsSubmitting(false);
+            return;
+          }
+          userData.role = formData.role;
+        } else if (formData.role !== currentUser.role) {
+          // Si no es SuperAdmin y trató de cambiar el rol, mostrar error
           toast.error("No tienes permiso para cambiar el rol de usuario");
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Si es SuperAdmin intentando cambiar su propio rol
+        if (
+          isSuperAdmin &&
+          currentUser.id === currentLoggedUser.id &&
+          formData.role !== currentUser.role
+        ) {
+          toast.error("No puedes cambiar tu propio rol de SuperAdmin");
+          setIsSubmitting(false);
           return;
         }
 
@@ -263,12 +288,28 @@ const Users: React.FC = () => {
           currentUser.id !== currentLoggedUser.id
         ) {
           toast.error("No puedes editar otros administradores");
+          setIsSubmitting(false);
           return;
         }
 
         await userService.updateUser(currentUser.id, userData);
         toast.success("Usuario actualizado correctamente");
       } else {
+        // Para la creación de usuarios, solo SuperAdmin puede crear Admin
+        // Y nadie puede crear SuperAdmin
+        if (formData.role === "SuperAdmin") {
+          toast.error("No se puede crear usuarios con rol SuperAdmin");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const roleEsValido = isSuperAdmin || formData.role === "User";
+        if (!roleEsValido) {
+          toast.error("Solo SuperAdmin puede crear administradores");
+          setIsSubmitting(false);
+          return;
+        }
+
         const newUserData = {
           name: formData.username.trim(),
           email: formData.email.trim(),
@@ -599,22 +640,43 @@ const Users: React.FC = () => {
                 )}
               </div>
 
-              {isAdmin && (
-                <div className="cursor-pointer">
-                  <Label htmlFor="role">Rol</Label>
-                  <select
-                    id="role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    className="cursor-pointer w-full px-3 py-2 border bg-white border-gray-300 rounded-md focus:outline-none"
-                  >
-                    {isSuperAdmin && (
-                      <option value="SuperAdmin">SuperAdmin</option>
+              {/* Campo de rol - Solo visible para SuperAdmin cuando no edita su propio usuario */}
+              {isSuperAdmin &&
+                (!currentUser || currentUser.id !== currentLoggedUser.id) && (
+                  <div className="cursor-pointer">
+                    <Label htmlFor="role">Rol</Label>
+                    <select
+                      id="role"
+                      name="role"
+                      value={formData.role}
+                      onChange={handleInputChange}
+                      className="cursor-pointer w-full px-3 py-2 border bg-white border-gray-300 rounded-md focus:outline-none"
+                    >
+                      {/* SuperAdmin solo puede verse como opción si el usuario ya es SuperAdmin */}
+                      {currentUser?.role === "SuperAdmin" && (
+                        <option value="SuperAdmin">SuperAdmin</option>
+                      )}
+                      <option value="Admin">Admin</option>
+                      <option value="User">User</option>
+                    </select>
+                  </div>
+                )}
+
+              {/* Mostrar el rol para usuarios sin permiso de cambio */}
+              {(!isSuperAdmin ||
+                (currentUser && currentUser.id === currentLoggedUser.id)) && (
+                <div>
+                  <Label htmlFor="role-display">Rol</Label>
+                  <div className="px-3 py-2 border bg-gray-100 border-gray-300 rounded-md text-gray-700">
+                    {formData.role}
+                  </div>
+                  {currentUser &&
+                    currentUser.id === currentLoggedUser.id &&
+                    isSuperAdmin && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        No puedes cambiar tu propio rol
+                      </p>
                     )}
-                    <option value="Admin">Admin</option>
-                    <option value="User">User</option>
-                  </select>
                 </div>
               )}
 
