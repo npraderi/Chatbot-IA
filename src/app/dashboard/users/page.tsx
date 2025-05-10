@@ -16,6 +16,7 @@ import {
   EyeOff,
   Key,
   Check,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +68,7 @@ const Users: React.FC = () => {
     username: "",
     role: "User" as UserRole,
   });
+  const [searchTerm, setSearchTerm] = useState("");
 
   const loadUsers = async () => {
     try {
@@ -333,6 +335,29 @@ const Users: React.FC = () => {
     }
   };
 
+  const filteredUsers = users
+    .filter((user) => {
+      // Si es SuperAdmin, puede ver a todos
+      if (isSuperAdmin) return true;
+      // Si es Admin, puede ver a todos excepto SuperAdmin
+      if (isAdmin) return user.role !== "SuperAdmin";
+      // Si no es admin ni superadmin, solo puede verse a sí mismo
+      return user.id === currentLoggedUser.id;
+    })
+    .filter((user) => {
+      if (!searchTerm.trim()) return true;
+      const search = searchTerm.toLowerCase();
+      return (
+        user.name?.toLowerCase().includes(search) ||
+        user.email?.toLowerCase().includes(search) ||
+        user.role?.toLowerCase().includes(search)
+      );
+    })
+    .sort((a, b) => {
+      // Ordenar alfabéticamente por nombre
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
+
   return (
     <div className="container mx-auto p-4 max-w-4xl bg-gray-50 ">
       <div className="flex justify-between items-center mb-6">
@@ -350,30 +375,38 @@ const Users: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-gray-50  shadow-md rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-[#BED1E0]">
-              <TableRow>
-                <TableHead className="text-[#2B577A]">Usuario</TableHead>
-                <TableHead className="text-[#2B577A]">Email</TableHead>
-                <TableHead className="text-[#2B577A]">Rol</TableHead>
-                <TableHead className="text-[#2B577A] text-right">
-                  Acciones
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users
-                .filter((user) => {
-                  // Si es SuperAdmin, puede ver a todos
-                  if (isSuperAdmin) return true;
-                  // Si es Admin, puede ver a todos excepto SuperAdmin
-                  if (isAdmin) return user.role !== "SuperAdmin";
-                  // Si no es admin ni superadmin, solo puede verse a sí mismo
-                  return user.id === currentLoggedUser.id;
-                })
-                .map((user) => (
+      <div className="mb-4 relative">
+        <div className="relative">
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            size={18}
+          />
+          <Input
+            type="text"
+            placeholder="Buscar usuarios..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 w-full border-gray-300 focus:border-[#2B577A] focus:ring-[#2B577A]"
+          />
+        </div>
+      </div>
+
+      <div className="bg-gray-50 shadow-md rounded-lg overflow-hidden">
+        <div className="overflow-hidden">
+          <div className="max-h-[500px] overflow-y-auto">
+            <Table>
+              <TableHeader className="bg-[#BED1E0] sticky top-0 z-10">
+                <TableRow>
+                  <TableHead className="text-[#2B577A]">Usuario</TableHead>
+                  <TableHead className="text-[#2B577A]">Email</TableHead>
+                  <TableHead className="text-[#2B577A]">Rol</TableHead>
+                  <TableHead className="text-[#2B577A] text-right">
+                    Acciones
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
                   <TableRow key={user.id} className="hover:bg-gray-50">
                     <TableCell>
                       <div className="flex items-center">
@@ -442,8 +475,9 @@ const Users: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-            </TableBody>
-          </Table>
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
 
