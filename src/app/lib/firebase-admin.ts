@@ -8,11 +8,25 @@ export async function initAdmin() {
   if (apps.length === 0) {
     // Si no hay aplicaciones inicializadas, inicializar Admin SDK
     try {
-      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      let serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
       if (!serviceAccountKey) {
         throw new Error(
           "FIREBASE_SERVICE_ACCOUNT_KEY no está configurado en las variables de entorno"
+        );
+      }
+
+      // Limpiar el valor de comillas envolventes extras si existen
+      // Esto soluciona el problema cuando la variable viene como '{"type": ...}' o "{"type": ...}"
+      serviceAccountKey = serviceAccountKey.trim();
+      if (
+        (serviceAccountKey.startsWith("'") &&
+          serviceAccountKey.endsWith("'")) ||
+        (serviceAccountKey.startsWith('"') && serviceAccountKey.endsWith('"'))
+      ) {
+        serviceAccountKey = serviceAccountKey.substring(
+          1,
+          serviceAccountKey.length - 1
         );
       }
 
@@ -38,7 +52,22 @@ export async function initAdmin() {
             serviceAccountKey,
             "base64"
           ).toString();
-          serviceAccount = JSON.parse(decodedKey);
+
+          // La cadena decodificada también podría tener comillas extras
+          let cleanedDecodedKey = decodedKey.trim();
+          if (
+            (cleanedDecodedKey.startsWith("'") &&
+              cleanedDecodedKey.endsWith("'")) ||
+            (cleanedDecodedKey.startsWith('"') &&
+              cleanedDecodedKey.endsWith('"'))
+          ) {
+            cleanedDecodedKey = cleanedDecodedKey.substring(
+              1,
+              cleanedDecodedKey.length - 1
+            );
+          }
+
+          serviceAccount = JSON.parse(cleanedDecodedKey);
 
           // Corregir el formato de la clave privada si es necesario
           if (
@@ -52,6 +81,12 @@ export async function initAdmin() {
         } catch (decodeError) {
           console.error("Error al parsear JSON:", parseError);
           console.error("Error al decodificar base64:", decodeError);
+          console.error(
+            "Valor de serviceAccountKey (recortado):",
+            serviceAccountKey.length > 20
+              ? `${serviceAccountKey.substring(0, 20)}...`
+              : serviceAccountKey
+          );
           const errorMessage =
             parseError instanceof Error
               ? parseError.message

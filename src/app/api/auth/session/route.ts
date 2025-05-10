@@ -15,33 +15,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear cookie de sesión
-    const sessionCookie = await createSessionCookie(idToken, expiresIn);
+    try {
+      // Crear cookie de sesión
+      const sessionCookie = await createSessionCookie(idToken, expiresIn);
 
-    // Configurar cookie en la respuesta
-    const cookieOptions = {
-      name: "session",
-      value: sessionCookie,
-      maxAge: expiresIn / 1000, // convertir a segundos
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      sameSite: "strict" as const,
-    };
+      // Configurar cookie en la respuesta
+      const cookieOptions = {
+        name: "session",
+        value: sessionCookie,
+        maxAge: expiresIn / 1000, // convertir a segundos
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        sameSite: "strict" as const,
+      };
 
-    // Crear respuesta
-    const response = NextResponse.json({ success: true });
+      // Crear respuesta
+      const response = NextResponse.json({ success: true });
 
-    // Establecer la cookie
-    response.cookies.set(cookieOptions);
+      // Establecer la cookie
+      response.cookies.set(cookieOptions);
 
-    return response;
+      return response;
+    } catch (cookieError) {
+      console.error("Error al crear cookie de sesión:", cookieError);
+      // No lanzar el error para evitar la cascada, sino devolver respuesta con error
+      return NextResponse.json(
+        {
+          error: "Error al crear cookie de sesión",
+          details:
+            cookieError instanceof Error
+              ? cookieError.message
+              : "Error desconocido",
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error("Error al crear sesión:", error);
+    console.error("Error al procesar solicitud de sesión:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Error desconocido";
     return NextResponse.json(
-      { error: "Error al crear sesión", details: errorMessage },
+      { error: "Error al procesar la solicitud", details: errorMessage },
       { status: 500 }
     );
   }
