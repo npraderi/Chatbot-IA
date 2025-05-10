@@ -111,12 +111,20 @@ const Users: React.FC = () => {
   }
   if (!currentLoggedUser) return null;
 
-  // Verificar si el usuario actual es Admin
-  const isAdmin = currentLoggedUser.role === "Admin";
+  // Verificar si el usuario actual es Admin o SuperAdmin
+  const isAdmin =
+    currentLoggedUser.role === "Admin" ||
+    currentLoggedUser.role === "SuperAdmin";
+  const isSuperAdmin = currentLoggedUser.role === "SuperAdmin";
 
   const handleOpenModal = (user: User | null = null) => {
-    // Si el usuario actual es admin y está intentando editar otro admin
-    if (isAdmin && user?.role === "Admin" && user.id !== currentLoggedUser.id) {
+    // Si el usuario actual es admin (pero no superadmin) y está intentando editar otro admin
+    if (
+      isAdmin &&
+      !isSuperAdmin &&
+      user?.role === "Admin" &&
+      user.id !== currentLoggedUser.id
+    ) {
       toast.error("No puedes editar otros administradores");
       return;
     }
@@ -245,9 +253,10 @@ const Users: React.FC = () => {
           return;
         }
 
-        // Si es admin, solo puede editar su propio perfil
+        // Si es admin (pero no superadmin), solo puede editar su propio perfil
         if (
           isAdmin &&
+          !isSuperAdmin &&
           currentUser.role === "Admin" &&
           currentUser.id !== currentLoggedUser.id
         ) {
@@ -287,8 +296,16 @@ const Users: React.FC = () => {
     }
 
     const userToDelete = users.find((u) => u.id === userId);
-    if (userToDelete?.role === "Admin" && !isAdmin) {
-      toast.error("No tienes permiso para eliminar usuarios Admin");
+
+    // Solo SuperAdmin puede eliminar usuarios Admin
+    if (userToDelete?.role === "Admin" && !isSuperAdmin) {
+      toast.error("Solo SuperAdmin puede eliminar administradores");
+      return;
+    }
+
+    // Nadie puede eliminar a un SuperAdmin
+    if (userToDelete?.role === "SuperAdmin") {
+      toast.error("No se puede eliminar un SuperAdmin");
       return;
     }
 
@@ -369,7 +386,9 @@ const Users: React.FC = () => {
                   <TableCell>
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.role === "Admin"
+                        user.role === "SuperAdmin"
+                          ? "bg-red-100 text-red-800"
+                          : user.role === "Admin"
                           ? "bg-purple-100 text-purple-800"
                           : "bg-green-100 text-green-800"
                       }`}
@@ -380,7 +399,11 @@ const Users: React.FC = () => {
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-1">
                       {(user.id === currentLoggedUser.id ||
-                        (isAdmin && user.role !== "Admin")) && (
+                        (isAdmin && user.role !== "Admin") ||
+                        (isSuperAdmin && user.role === "Admin") ||
+                        (isSuperAdmin &&
+                          user.role === "SuperAdmin" &&
+                          user.id === currentLoggedUser.id)) && (
                         <Button
                           onClick={() => handleOpenModal(user)}
                           variant="ghost"
@@ -391,8 +414,10 @@ const Users: React.FC = () => {
                           <Edit size={18} />
                         </Button>
                       )}
-                      {isAdmin &&
+                      {((isAdmin &&
                         user.role !== "Admin" &&
+                        user.role !== "SuperAdmin") ||
+                        (isSuperAdmin && user.role === "Admin")) &&
                         user.id !== currentLoggedUser.id && (
                           <Button
                             onClick={() => handleDeleteUser(user.id)}
@@ -541,6 +566,9 @@ const Users: React.FC = () => {
                     onChange={handleInputChange}
                     className="cursor-pointer w-full px-3 py-2 border bg-white border-gray-300 rounded-md focus:outline-none"
                   >
+                    {isSuperAdmin && (
+                      <option value="SuperAdmin">SuperAdmin</option>
+                    )}
                     <option value="Admin">Admin</option>
                     <option value="User">User</option>
                   </select>

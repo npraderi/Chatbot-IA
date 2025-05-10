@@ -76,7 +76,9 @@ const Profile: React.FC = () => {
                 <p className="text-xs sm:text-sm text-gray-500">Rol</p>
                 <span
                   className={`mt-1 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    currentUser.role === "Admin"
+                    currentUser.role === "SuperAdmin"
+                      ? "bg-red-100 text-red-800"
+                      : currentUser.role === "Admin"
                       ? "bg-purple-100 text-purple-800"
                       : "bg-green-100 text-green-800"
                   }`}
@@ -98,6 +100,7 @@ const Profile: React.FC = () => {
                   <li className="flex items-center">
                     <span
                       className={`w-3 h-3 sm:w-4 sm:h-4 mr-2 rounded-full ${
+                        currentUser.role === "SuperAdmin" ||
                         authService.isAdmin(currentUser)
                           ? "bg-[#336633]"
                           : "bg-gray-300"
@@ -114,6 +117,7 @@ const Profile: React.FC = () => {
                   <li className="flex items-center">
                     <span
                       className={`w-3 h-3 sm:w-4 sm:h-4 mr-2 rounded-full ${
+                        currentUser.role === "SuperAdmin" ||
                         currentUser.role === "Admin"
                           ? "bg-[#336633]"
                           : "bg-gray-300"
@@ -123,6 +127,14 @@ const Profile: React.FC = () => {
                       Administración completa
                     </span>
                   </li>
+                  {currentUser.role === "SuperAdmin" && (
+                    <li className="flex items-center">
+                      <span className="w-3 h-3 sm:w-4 sm:h-4 mr-2 rounded-full bg-[#336633]" />
+                      <span className="text-sm sm:text-base">
+                        Gestión de administradores
+                      </span>
+                    </li>
+                  )}
                 </ul>
               </div>
             </div>

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Verificar que el usuario que hace la petición es admin
+    // Verificar que el usuario que hace la petición es admin o superadmin
     const adminId = decodedClaims.uid;
     const adminDoc = await admin
       .firestore()
@@ -37,7 +37,10 @@ export async function POST(request: NextRequest) {
       .get();
     const adminData = adminDoc.data();
 
-    if (!adminDoc.exists || adminData?.role !== "Admin") {
+    if (
+      !adminDoc.exists ||
+      (adminData?.role !== "Admin" && adminData?.role !== "SuperAdmin")
+    ) {
       return NextResponse.json(
         { error: "Solo los administradores pueden crear usuarios" },
         { status: 403 }

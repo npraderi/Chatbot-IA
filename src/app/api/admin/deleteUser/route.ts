@@ -57,7 +57,10 @@ export async function DELETE(request: NextRequest) {
 
       const adminData = adminDoc.data();
 
-      if (!adminDoc.exists || adminData?.role !== "Admin") {
+      if (
+        !adminDoc.exists ||
+        (adminData?.role !== "Admin" && adminData?.role !== "SuperAdmin")
+      ) {
         console.error("Error: El usuario no es administrador", {
           adminId,
           role: adminData?.role,
@@ -75,6 +78,34 @@ export async function DELETE(request: NextRequest) {
       if (adminId === uid) {
         return NextResponse.json(
           { error: "No puedes eliminar tu propio usuario" },
+          { status: 403 }
+        );
+      }
+
+      // Obtener información del usuario a eliminar para verificar roles
+      const userToDeleteDoc = await admin
+        .firestore()
+        .collection("users")
+        .doc(uid)
+        .get();
+
+      const userToDeleteData = userToDeleteDoc.data();
+
+      // Si el usuario a eliminar es Admin, verificar que quien lo elimina es SuperAdmin
+      if (
+        userToDeleteData?.role === "Admin" &&
+        adminData?.role !== "SuperAdmin"
+      ) {
+        return NextResponse.json(
+          { error: "Solo un SuperAdmin puede eliminar usuarios Admin" },
+          { status: 403 }
+        );
+      }
+
+      // Nadie puede eliminar a un SuperAdmin
+      if (userToDeleteData?.role === "SuperAdmin") {
+        return NextResponse.json(
+          { error: "No se puede eliminar a un SuperAdmin" },
           { status: 403 }
         );
       }

@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Endpoint para verificar o eliminar la sesión
-export async function DELETE(request: NextRequest) {
+export async function DELETE() {
   // Eliminar la cookie de sesión
   const response = NextResponse.json({ success: true });
   response.cookies.delete("session");
@@ -56,9 +56,9 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Endpoint para verificar la sesión actual
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("session")?.value;
 
     if (!sessionCookie) {

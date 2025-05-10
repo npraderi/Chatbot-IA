@@ -10,7 +10,7 @@ import {
 import { auth, db } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-export type UserRole = "Admin" | "User";
+export type UserRole = "SuperAdmin" | "Admin" | "User";
 
 export interface User {
   id: string;
@@ -146,10 +146,10 @@ export const authService = {
   },
 
   isAdmin: (user: User | null): boolean => {
-    return user?.role === "Admin";
+    return user?.role === "Admin" || user?.role === "SuperAdmin";
   },
 
   isSuperAdmin: (user: User | null): boolean => {
-    return user?.role === "Admin";
+    return user?.role === "SuperAdmin";
   },
 };

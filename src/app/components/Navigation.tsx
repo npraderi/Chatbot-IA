@@ -24,7 +24,8 @@ const Navigation: React.FC = () => {
     return null;
   }
 
-  const isAdmin = currentUser.role === "Admin";
+  const isAdmin =
+    currentUser.role === "Admin" || currentUser.role === "SuperAdmin";
 
   const isActive = (path: string) => pathname === path;
 
