@@ -97,36 +97,28 @@ const Profile: React.FC = () => {
               </h2>
               <div className="bg-gray-50 p-3 sm:p-4 rounded-md border">
                 <ul className="space-y-2.5">
-                  <li className="flex items-center">
-                    <span
-                      className={`w-3 h-3 sm:w-4 sm:h-4 mr-2 rounded-full ${
-                        currentUser.role === "SuperAdmin" ||
-                        authService.isAdmin(currentUser)
-                          ? "bg-[#336633]"
-                          : "bg-gray-300"
-                      }`}
-                    />
-                    <span className="text-sm sm:text-base">
-                      Administración de usuarios
-                    </span>
-                  </li>
+                  {(currentUser.role === "SuperAdmin" ||
+                    authService.isAdmin(currentUser)) && (
+                    <li className="flex items-center">
+                      <span className="w-3 h-3 sm:w-4 sm:h-4 mr-2 rounded-full bg-[#336633]" />
+                      <span className="text-sm sm:text-base">
+                        Administración de usuarios
+                      </span>
+                    </li>
+                  )}
                   <li className="flex items-center">
                     <span className="w-3 h-3 sm:w-4 sm:h-4 mr-2 rounded-full bg-[#336633]" />
                     <span className="text-sm sm:text-base">Acceso al chat</span>
                   </li>
-                  <li className="flex items-center">
-                    <span
-                      className={`w-3 h-3 sm:w-4 sm:h-4 mr-2 rounded-full ${
-                        currentUser.role === "SuperAdmin" ||
-                        currentUser.role === "Admin"
-                          ? "bg-[#336633]"
-                          : "bg-gray-300"
-                      }`}
-                    />
-                    <span className="text-sm sm:text-base">
-                      Administración completa
-                    </span>
-                  </li>
+                  {(currentUser.role === "SuperAdmin" ||
+                    currentUser.role === "Admin") && (
+                    <li className="flex items-center">
+                      <span className="w-3 h-3 sm:w-4 sm:h-4 mr-2 rounded-full bg-[#336633]" />
+                      <span className="text-sm sm:text-base">
+                        Administración completa
+                      </span>
+                    </li>
+                  )}
                   {currentUser.role === "SuperAdmin" && (
                     <li className="flex items-center">
                       <span className="w-3 h-3 sm:w-4 sm:h-4 mr-2 rounded-full bg-[#336633]" />
