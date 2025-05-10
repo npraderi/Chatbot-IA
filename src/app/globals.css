@@ -24,3 +24,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Ocultar los mensajes de error nativos de NextJS */
+[data-nextjs-error],
+[data-nextjs-toast],
+[data-nextjs-dialog],
+[data-nextjs-codeframe],
+#__next-build-watcher,
+nextjs-portal {
+  display: none !important;
+}

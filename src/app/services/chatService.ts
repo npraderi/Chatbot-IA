@@ -10,8 +10,10 @@ import {
   query,
   where,
   Timestamp,
+  FirestoreError,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { handleError, AppError } from "@/lib/error-handler";
 
 export interface Message {
   id: string;
@@ -31,10 +33,22 @@ export interface Conversation {
   createdAt: Date;
 }
 
+export class ChatServiceError extends Error implements AppError {
+  code?: string;
+  status?: number;
+  details?: string;
+
+  constructor(message: string, code?: string, status?: number) {
+    super(message);
+    this.name = "ChatServiceError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
 export const chatService = {
   async getConversations(userId: string): Promise<Conversation[]> {
     try {
-      console.log("Obteniendo conversaciones para usuario:", userId);
       const conversationsRef = collection(db, "conversations");
       const q = query(conversationsRef, where("userId", "==", userId));
 
@@ -62,17 +76,21 @@ export const chatService = {
         (a, b) => b.lastMessageDate.getTime() - a.lastMessageDate.getTime()
       );
 
-      console.log("Conversaciones obtenidas:", conversations);
       return conversations;
     } catch (error) {
-      console.error("Error al obtener conversaciones:", error);
-      throw error;
+      const firestoreError = error as FirestoreError;
+      const serviceError = new ChatServiceError(
+        "Error al obtener conversaciones",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
   async getAllConversations(): Promise<Conversation[]> {
     try {
-      console.log("Obteniendo todas las conversaciones");
       const conversationsRef = collection(db, "conversations");
       const querySnapshot = await getDocs(conversationsRef);
 
@@ -99,11 +117,16 @@ export const chatService = {
         (a, b) => b.lastMessageDate.getTime() - a.lastMessageDate.getTime()
       );
 
-      console.log("Todas las conversaciones obtenidas:", conversations);
       return conversations;
     } catch (error) {
-      console.error("Error al obtener todas las conversaciones:", error);
-      throw error;
+      const firestoreError = error as FirestoreError;
+      const serviceError = new ChatServiceError(
+        "Error al obtener todas las conversaciones",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
@@ -132,8 +155,14 @@ export const chatService = {
             : new Date(data.createdAt),
       };
     } catch (error) {
-      console.error("Error al obtener conversación:", error);
-      throw error;
+      const firestoreError = error as FirestoreError;
+      const serviceError = new ChatServiceError(
+        "Error al obtener conversación",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
@@ -160,8 +189,14 @@ export const chatService = {
 
       return newConversation;
     } catch (error) {
-      console.error("Error al crear conversación:", error);
-      throw error;
+      const firestoreError = error as FirestoreError;
+      const serviceError = new ChatServiceError(
+        "Error al crear conversación",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
@@ -175,8 +210,14 @@ export const chatService = {
         title: newTitle,
       });
     } catch (error) {
-      console.error("Error al actualizar título de conversación:", error);
-      throw error;
+      const firestoreError = error as FirestoreError;
+      const serviceError = new ChatServiceError(
+        "Error al actualizar título de conversación",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
@@ -189,7 +230,11 @@ export const chatService = {
       const conversationDoc = await getDoc(conversationRef);
 
       if (!conversationDoc.exists()) {
-        throw new Error("Conversación no encontrada");
+        throw new ChatServiceError(
+          "Conversación no encontrada",
+          "not_found",
+          404
+        );
       }
 
       const data = conversationDoc.data();
@@ -207,8 +252,19 @@ export const chatService = {
         lastMessageDate: Timestamp.fromDate(new Date()),
       });
     } catch (error) {
-      console.error("Error al agregar mensaje:", error);
-      throw error;
+      if (error instanceof ChatServiceError) {
+        handleError(error);
+        throw error;
+      }
+
+      const firestoreError = error as FirestoreError;
+      const serviceError = new ChatServiceError(
+        "Error al agregar mensaje",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
@@ -219,7 +275,11 @@ export const chatService = {
       const conversationDoc = await getDoc(conversationRef);
 
       if (!conversationDoc.exists()) {
-        throw new Error("Conversación no encontrada");
+        throw new ChatServiceError(
+          "Conversación no encontrada",
+          "not_found",
+          404
+        );
       }
 
       // Obtener un chiste de la API
@@ -228,11 +288,21 @@ export const chatService = {
         const res = await fetch("https://icanhazdadjoke.com/", {
           headers: { Accept: "application/json" },
         });
+
+        if (!res.ok) {
+          throw new ChatServiceError(
+            "Error al obtener respuesta del servidor externo",
+            "external_api_error",
+            res.status
+          );
+        }
+
         const data = await res.json();
         if (data && data.joke) {
           botText = data.joke;
         }
       } catch (jokeError) {
+        // Solo registramos el error, pero continuamos con una respuesta predeterminada
         console.error("Error al obtener chiste:", jokeError);
       }
 
@@ -262,8 +332,20 @@ export const chatService = {
       // Devolver la conversación actualizada
       return this.getConversation(conversationId);
     } catch (error) {
-      console.error("Error al enviar respuesta del bot:", error);
-      throw error;
+      if (error instanceof ChatServiceError) {
+        handleError(error);
+        throw error;
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Error desconocido";
+      const serviceError = new ChatServiceError(
+        "Error al enviar respuesta del bot: " + errorMessage,
+        "bot_response_error",
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
@@ -272,8 +354,14 @@ export const chatService = {
       const conversationRef = doc(db, "conversations", conversationId);
       await deleteDoc(conversationRef);
     } catch (error) {
-      console.error("Error al eliminar conversación:", error);
-      throw error;
+      const firestoreError = error as FirestoreError;
+      const serviceError = new ChatServiceError(
+        "Error al eliminar conversación",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 };

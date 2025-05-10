@@ -8,18 +8,15 @@ import {
   deleteDoc,
   query,
   where,
+  FirestoreError,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { handleError, AppError } from "@/lib/error-handler";
 
-interface ApiError {
-  message: string;
+export class UserServiceError extends Error implements AppError {
   code?: string;
   status?: number;
-}
-
-class UserServiceError extends Error implements ApiError {
-  code?: string;
-  status?: number;
+  details?: string;
 
   constructor(message: string, code?: string, status?: number) {
     super(message);
@@ -30,7 +27,7 @@ class UserServiceError extends Error implements ApiError {
 }
 
 // Interfaz para la creación de usuarios
-interface CreateUserData {
+export interface CreateUserData {
   name: string;
   email: string;
   password: string;
@@ -49,8 +46,14 @@ export const userService = {
         ...doc.data(),
       })) as User[];
     } catch (error) {
-      console.error("Error al obtener usuarios:", error);
-      throw new UserServiceError("Error al obtener usuarios");
+      const firestoreError = error as FirestoreError;
+      const serviceError = new UserServiceError(
+        "Error al obtener usuarios",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
@@ -58,7 +61,6 @@ export const userService = {
   async createUser(userData: CreateUserData): Promise<User> {
     try {
       // Utilizar el endpoint de la API para crear usuarios desde el servidor
-      // esto evita problemas de sesión automática en el navegador
       const response = await fetch("/api/admin/createUser", {
         method: "POST",
         headers: {
@@ -79,27 +81,21 @@ export const userService = {
       const result = await response.json();
       return result.user;
     } catch (error) {
-      console.error("Error al crear usuario:", error);
-
       if (error instanceof UserServiceError) {
+        handleError(error);
         throw error;
       }
 
-      const firebaseError = error as { code?: string; message?: string };
+      // Si es un error que no viene de nuestra API
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Error desconocido al crear usuario";
+      const code = (error as { code?: string }).code;
 
-      if (firebaseError.code === "auth/email-already-in-use") {
-        throw new UserServiceError("El email ya está en uso");
-      }
-      if (firebaseError.code === "auth/invalid-email") {
-        throw new UserServiceError("El email no es válido");
-      }
-      if (firebaseError.code === "auth/weak-password") {
-        throw new UserServiceError("La contraseña es demasiado débil");
-      }
-
-      throw new UserServiceError(
-        firebaseError.message || "Error al crear el usuario"
-      );
+      const serviceError = new UserServiceError(errorMessage, code, 500);
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
@@ -110,13 +106,19 @@ export const userService = {
       const userDoc = await getDoc(userRef);
 
       if (!userDoc.exists()) {
-        throw new UserServiceError("Usuario no encontrado");
+        throw new UserServiceError("Usuario no encontrado", "not_found", 404);
       }
 
       await updateDoc(userRef, userData);
     } catch (error) {
-      console.error("Error al actualizar usuario:", error);
-      throw new UserServiceError("Error al actualizar el usuario");
+      const firestoreError = error as FirestoreError;
+      const serviceError = new UserServiceError(
+        "Error al actualizar el usuario",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
@@ -128,7 +130,7 @@ export const userService = {
       const userDoc = await getDoc(userRef);
 
       if (!userDoc.exists()) {
-        throw new UserServiceError("Usuario no encontrado");
+        throw new UserServiceError("Usuario no encontrado", "not_found", 404);
       }
 
       // 2. Eliminar las conversaciones asociadas al usuario
@@ -144,35 +146,29 @@ export const userService = {
 
       // 3. Eliminar el documento de usuario en Firestore
       await deleteDoc(userRef);
-
-      // 4. No podemos eliminar directamente el usuario de Auth desde el cliente
-      // Esta operación debe ser manejada con cuidado, generalmente a través de
-      // las Firebase Admin SDK o en el cliente después de autenticar al usuario
-      console.log(
-        "Usuario eliminado de Firestore. La eliminación de Auth debe ser manejada por el cliente."
-      );
     } catch (error) {
-      console.error("Error al eliminar usuario:", error);
-      throw new UserServiceError("Error al eliminar el usuario");
+      const firestoreError = error as FirestoreError;
+      const serviceError = new UserServiceError(
+        "Error al eliminar el usuario",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
-  // Eliminar completamente un usuario (usando Cloud Functions)
-  // Esta función requiere una función de Cloud Functions que elimine el usuario de Firebase Auth
+  // Eliminar completamente un usuario (usando la API)
   async deleteUserCompletely(userId: string): Promise<void> {
     try {
       // 1. Obtener el usuario que vamos a eliminar
       const user = await this.getUserById(userId);
       if (!user) {
-        throw new UserServiceError("Usuario no encontrado");
+        throw new UserServiceError("Usuario no encontrado", "not_found", 404);
       }
 
-      // 2. Llamar a la función de Cloud Functions para eliminar el usuario de Firebase Auth
-      // Aquí se debería implementar una llamada a una función de Cloud Functions
-      // que elimine el usuario de Firebase Auth usando la Admin SDK
+      // 2. Llamar a la API para eliminar el usuario de Firebase Auth
       try {
-        // Como alternativa a Cloud Functions, se podría implementar un endpoint en
-        // un servidor propio que utilice la Admin SDK para eliminar el usuario
         const apiUrl = `/api/admin/deleteUser?uid=${userId}`;
         const response = await fetch(apiUrl, {
           method: "DELETE",
@@ -184,25 +180,47 @@ export const userService = {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(
+          throw new UserServiceError(
             errorData.error ||
-              `Error al eliminar usuario de Auth: ${response.statusText}`
+              `Error al eliminar usuario de Auth: ${response.statusText}`,
+            errorData.code,
+            response.status
           );
         }
       } catch (authError) {
-        console.error("Error al eliminar usuario de Auth:", authError);
-        throw authError; // Re-lanzar el error para detener el proceso
+        if (authError instanceof UserServiceError) {
+          handleError(authError);
+          throw authError;
+        }
+
+        const errorMessage =
+          authError instanceof Error ? authError.message : "Error desconocido";
+        const serviceError = new UserServiceError(
+          errorMessage,
+          "auth_delete_error",
+          500
+        );
+        handleError(serviceError);
+        throw serviceError;
       }
 
       // 3. Si la eliminación de Auth fue exitosa, eliminar los datos del usuario en Firestore
       await this.deleteUser(userId);
     } catch (error) {
-      console.error("Error al eliminar usuario completamente:", error);
-      throw new UserServiceError(
-        error instanceof Error
-          ? error.message
-          : "Error al eliminar el usuario completamente"
+      if (error instanceof UserServiceError) {
+        handleError(error);
+        throw error;
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Error desconocido";
+      const serviceError = new UserServiceError(
+        errorMessage,
+        "delete_user_error",
+        500
       );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 
@@ -221,8 +239,14 @@ export const userService = {
         ...userDoc.data(),
       } as User;
     } catch (error) {
-      console.error("Error al obtener usuario:", error);
-      throw new UserServiceError("Error al obtener el usuario");
+      const firestoreError = error as FirestoreError;
+      const serviceError = new UserServiceError(
+        "Error al obtener el usuario",
+        firestoreError.code,
+        500
+      );
+      handleError(serviceError);
+      throw serviceError;
     }
   },
 };

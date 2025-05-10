@@ -1,4 +1,3 @@
-// services/authService.ts
 "use client";
 
 import {
@@ -6,9 +5,11 @@ import {
   signOut,
   onAuthStateChanged,
   getIdToken,
+  AuthError,
 } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { handleError, AppError } from "@/lib/error-handler";
 
 export type UserRole = "SuperAdmin" | "Admin" | "User";
 
@@ -18,6 +19,19 @@ export interface User {
   email: string;
   role: UserRole;
   fullName?: string;
+}
+
+export class AuthServiceError extends Error implements AppError {
+  code?: string;
+  status?: number;
+  details?: string;
+
+  constructor(message: string, code?: string, status?: number) {
+    super(message);
+    this.name = "AuthServiceError";
+    this.code = code;
+    this.status = status;
+  }
 }
 
 export const authService = {
@@ -43,11 +57,12 @@ export const authService = {
       });
 
       if (!sessionResponse.ok) {
-        console.error(
-          "Error al crear la sesión:",
-          await sessionResponse.json()
+        const errorData = await sessionResponse.json();
+        throw new AuthServiceError(
+          errorData.error || "Error al crear la sesión",
+          "session_error",
+          sessionResponse.status
         );
-        // Continuar a pesar del error para al menos permitir la funcionalidad local
       }
 
       // 4. Obtener el documento del usuario de Firestore
@@ -74,7 +89,14 @@ export const authService = {
         ...userData,
       };
     } catch (error) {
-      console.error("Error en login:", error);
+      // Convertir error de Firebase a nuestro formato
+      const firebaseError = error as AuthError;
+      handleError(
+        new AuthServiceError(
+          firebaseError.message || "Error en el inicio de sesión",
+          firebaseError.code
+        )
+      );
       return null;
     }
   },
@@ -89,7 +111,10 @@ export const authService = {
         method: "DELETE",
       });
     } catch (error) {
-      console.error("Error en logout:", error);
+      const firebaseError = error as AuthError;
+      handleError(
+        new AuthServiceError("Error al cerrar sesión", firebaseError.code)
+      );
       throw error;
     }
   },
@@ -118,10 +143,8 @@ export const authService = {
           });
 
           if (!sessionResponse.ok) {
-            console.warn(
-              "Error al renovar la sesión:",
-              await sessionResponse.json()
-            );
+            const errorData = await sessionResponse.json();
+            console.warn("Error al renovar la sesión:", errorData);
             // Continuar a pesar del error
           }
 
@@ -138,7 +161,13 @@ export const authService = {
             ...userData,
           });
         } catch (error) {
-          console.error("Error al obtener usuario actual:", error);
+          const authError = error as AuthError;
+          handleError(
+            new AuthServiceError(
+              "Error al obtener usuario actual",
+              authError.code
+            )
+          );
           resolve(null);
         }
       });

@@ -5,6 +5,11 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation"; // <-- import
 import Navigation from "@/components/Navigation";
 import { authService, User as UserType } from "@/services/authService";
+import {
+  disableReactDevErrors,
+  suppressHydrationWarnings,
+} from "@/lib/error-utils";
+import { toast } from "sonner";
 
 export default function DashboardLayout({
   children,
@@ -14,6 +19,12 @@ export default function DashboardLayout({
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const pathname = usePathname(); // <-- ruta actual
 
+  // Desactivar errores de desarrollo y supresión de hidratación
+  useEffect(() => {
+    disableReactDevErrors();
+    suppressHydrationWarnings();
+  }, []);
+
   // Cada vez que cambie la ruta, releemos el user
   useEffect(() => {
     const loadUser = async () => {
@@ -21,7 +32,8 @@ export default function DashboardLayout({
         const user = await authService.getCurrentUser();
         setCurrentUser(user);
       } catch (error) {
-        console.error("Error al cargar usuario:", error);
+        console.error("[Error controlado]:", error);
+        toast.error("Error al cargar información del usuario");
         setCurrentUser(null);
       }
     };
