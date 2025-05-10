@@ -21,14 +21,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/Spinner";
 
@@ -433,91 +425,92 @@ const Users: React.FC = () => {
       </div>
 
       <div className="bg-gray-50 shadow-md rounded-lg overflow-hidden">
-        <div className="overflow-hidden">
+        {/* Tabla con encabezado fijo */}
+        <div className="relative">
+          {/* Header fijo */}
+          <div className="sticky top-0 z-20 w-full bg-[#BED1E0] border-b border-gray-200">
+            <div className="grid grid-cols-4 px-4 py-3">
+              <div className="text-[#2B577A] font-medium">Usuario</div>
+              <div className="text-[#2B577A] font-medium">Email</div>
+              <div className="text-[#2B577A] font-medium  pl-20">Rol</div>
+              <div className="text-[#2B577A] font-medium text-end pr-6">
+                Acciones
+              </div>
+            </div>
+          </div>
+
+          {/* Cuerpo de la tabla con scroll */}
           <div className="max-h-[500px] overflow-y-auto">
-            <Table>
-              <TableHeader className="bg-[#BED1E0] sticky top-0 z-10">
-                <TableRow>
-                  <TableHead className="text-[#2B577A]">Usuario</TableHead>
-                  <TableHead className="text-[#2B577A]">Email</TableHead>
-                  <TableHead className="text-[#2B577A]">Rol</TableHead>
-                  <TableHead className="text-[#2B577A] text-right">
-                    Acciones
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-[#BED1E0] rounded-full flex items-center justify-center">
-                          <UserIcon className="h-5 w-5 text-[#2B577A]" />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.name}
-                          </div>
-                        </div>
+            {filteredUsers.map((user) => (
+              <div
+                key={user.id}
+                className="grid grid-cols-4 px-4 py-3 border-b border-gray-200 hover:bg-gray-50"
+              >
+                <div>
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 h-10 w-10 bg-[#BED1E0] rounded-full flex items-center justify-center">
+                      <UserIcon className="h-5 w-5 text-[#2B577A]" />
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {user.name}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-gray-900">
-                        {user.email || "-"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user.role === "SuperAdmin"
-                            ? "bg-red-100 text-red-800"
-                            : user.role === "Admin"
-                            ? "bg-purple-100 text-purple-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-900 flex items-center">
+                  {user.email || "-"}
+                </div>
+                <div className="flex justify-start items-center pl-20">
+                  <span
+                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      user.role === "SuperAdmin"
+                        ? "bg-red-100 text-red-800"
+                        : user.role === "Admin"
+                        ? "bg-purple-100 text-purple-800"
+                        : "bg-green-100 text-green-800"
+                    }`}
+                  >
+                    {user.role}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <div className="flex justify-end space-x-1">
+                    {(user.id === currentLoggedUser.id ||
+                      (isAdmin && user.role !== "Admin") ||
+                      (isSuperAdmin && user.role === "Admin") ||
+                      (isSuperAdmin &&
+                        user.role === "SuperAdmin" &&
+                        user.id === currentLoggedUser.id)) && (
+                      <Button
+                        onClick={() => handleOpenModal(user)}
+                        variant="ghost"
+                        size="sm"
+                        className="cursor-pointer text-blue-600 hover:text-blue-900"
+                        title="Editar usuario"
                       >
-                        {user.role}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-1">
-                        {(user.id === currentLoggedUser.id ||
-                          (isAdmin && user.role !== "Admin") ||
-                          (isSuperAdmin && user.role === "Admin") ||
-                          (isSuperAdmin &&
-                            user.role === "SuperAdmin" &&
-                            user.id === currentLoggedUser.id)) && (
-                          <Button
-                            onClick={() => handleOpenModal(user)}
-                            variant="ghost"
-                            size="sm"
-                            className="cursor-pointer text-blue-600 hover:text-blue-900"
-                            title="Editar usuario"
-                          >
-                            <Edit size={18} />
-                          </Button>
-                        )}
-                        {((isAdmin &&
-                          user.role !== "Admin" &&
-                          user.role !== "SuperAdmin") ||
-                          (isSuperAdmin && user.role === "Admin")) &&
-                          user.id !== currentLoggedUser.id && (
-                            <Button
-                              onClick={() => handleDeleteUser(user.id)}
-                              variant="ghost"
-                              size="sm"
-                              className="cursor-pointer text-red-600 hover:text-red-900"
-                              title="Eliminar usuario"
-                            >
-                              <Trash size={18} />
-                            </Button>
-                          )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        <Edit size={18} />
+                      </Button>
+                    )}
+                    {((isAdmin &&
+                      user.role !== "Admin" &&
+                      user.role !== "SuperAdmin") ||
+                      (isSuperAdmin && user.role === "Admin")) &&
+                      user.id !== currentLoggedUser.id && (
+                        <Button
+                          onClick={() => handleDeleteUser(user.id)}
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-pointer text-red-600 hover:text-red-900"
+                          title="Eliminar usuario"
+                        >
+                          <Trash size={18} />
+                        </Button>
+                      )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
