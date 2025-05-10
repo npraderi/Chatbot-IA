@@ -1,7 +1,6 @@
 import React from "react";
 import { Conversation } from "@/services/chatService";
-import { MessageSquare, Trash2, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MessageSquare, Clock } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -10,7 +9,6 @@ interface ConversationListProps {
   conversations: Conversation[];
   activeConversation: Conversation | null;
   onSelectConversation: (conversation: Conversation) => void;
-  onDeleteConversation: (e: React.MouseEvent, conversationId: string) => void;
   currentUserId: string;
   isAdmin: boolean;
   userRole: string;
@@ -20,9 +18,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
   activeConversation,
   onSelectConversation,
-  onDeleteConversation,
-  currentUserId,
-  isAdmin,
   userRole,
 }) => {
   const formatDate = (date: Date) => {
@@ -34,7 +29,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   };
 
   return (
-    <ScrollArea className="h-full w-full">
+    <ScrollArea className="h-full w-full ">
       <div className="py-2">
         {conversations.length > 0 ? (
           conversations.map((conv) => (
@@ -52,11 +47,13 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   <MessageSquare size={18} className="text-white" />
                 </div>
                 <div className="ml-3 flex-grow">
-                  <div className="font-medium">{conv.title}</div>
+                  <div className="font-medium truncate max-w-[180px]">
+                    {conv.title}
+                  </div>
                   <div className="text-xs text-gray-500 truncate max-w-[180px]">
                     {conv.messages.length > 0
                       ? conv.messages[conv.messages.length - 1].content
-                      : "Nueva conversación"}
+                      : "Sin mensajes"}
                   </div>
                   {userRole === "User" && (
                     <div className="text-xs text-gray-400 flex items-center mt-1">
@@ -70,19 +67,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <span className="text-xs text-gray-500 mb-1">
+                <span className="text-xs text-gray-500  flex-nowrap w-12 mr-6">
                   {formatDate(new Date(conv.lastMessageDate))}
                 </span>
-                {(isAdmin || conv.userId === currentUserId) && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-gray-400 hover:text-red-500 cursor-pointer"
-                    onClick={(e) => onDeleteConversation(e, conv.id)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                )}
               </div>
             </div>
           ))

@@ -187,10 +187,18 @@ export const chatService = {
       const newConversationRef = doc(conversationsRef);
       const now = new Date();
 
+      // Crear título con formato "Nueva conversación" + fecha y hora
+      const formattedDate = now.toLocaleDateString("es-ES");
+      const formattedTime = now.toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const newTitle = `Nueva conversación ${formattedDate} ${formattedTime}`;
+
       const newConversation: Conversation = {
         id: newConversationRef.id,
         userId,
-        title: `Conversación ${newConversationRef.id}`,
+        title: newTitle,
         messages: [],
         lastMessageDate: now,
         createdAt: now,

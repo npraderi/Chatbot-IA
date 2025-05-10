@@ -49,7 +49,6 @@ const Chat: React.FC = () => {
     activeConversation,
     setActiveConversation,
     createNewConversation,
-    deleteConversation,
     sendMessage,
     loading: chatLoading,
     isBotResponding,
@@ -108,6 +107,7 @@ const Chat: React.FC = () => {
         title: newTitle.trim(),
       });
       setEditingTitle(false);
+      toast.success("Título actualizado");
     } catch (error) {
       console.error("Error al actualizar título:", error);
       toast.error("Error al actualizar el título");
@@ -133,10 +133,6 @@ const Chat: React.FC = () => {
             conversations={conversations}
             activeConversation={activeConversation}
             onSelectConversation={selectConversation}
-            onDeleteConversation={(e, id) => {
-              e.stopPropagation();
-              deleteConversation(id);
-            }}
             currentUserId={currentUser.id}
             isAdmin={
               currentUser.role === "Admin" || currentUser.role === "SuperAdmin"
@@ -195,7 +191,7 @@ const Chat: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  <h2 className="font-bold">
+                  <h2 className="font-bold truncate max-w-[400px]">
                     {activeConversation?.title || "Selecciona una conversación"}
                   </h2>
                   {activeConversation && (
@@ -207,6 +203,7 @@ const Chat: React.FC = () => {
                       className="cursor-pointer"
                       variant="ghost"
                       size="sm"
+                      title="Editar título"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>

@@ -43,6 +43,15 @@ const ConversationDetail: React.FC<ConversationDetailProps> = ({
 
   return (
     <div className="space-y-4">
+      <div className="pb-4 border-b border-gray-100">
+        <p className="text-xs text-gray-500">
+          Creada el{" "}
+          {format(ensureValidDate(conversation.createdAt), "PPP", {
+            locale: es,
+          })}
+        </p>
+      </div>
+
       {conversation.messages &&
         conversation.messages.map((message) => (
           <div

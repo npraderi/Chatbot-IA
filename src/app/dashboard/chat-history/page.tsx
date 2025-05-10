@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Conversation } from "@/services/chatService";
-import { DateRange } from "react-day-picker";
 import ConversationList from "@/components/chat/ConversationList";
 import ConversationFilters from "@/components/chat/ConversationFilters";
 import ConversationDetail from "@/components/chat/ConversationDetail";
@@ -20,11 +19,6 @@ export default function ChatHistoryPage() {
     useState<Conversation | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<string>("all");
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: undefined,
-    to: undefined,
-  });
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -40,10 +34,18 @@ export default function ChatHistoryPage() {
         }
         setCurrentUser(user);
 
-        if (user.role === "Admin") {
+        // Si es Admin o SuperAdmin, cargar los usuarios para el filtro
+        if (user.role === "Admin" || user.role === "SuperAdmin") {
           const allUsers = await userService.getUsers();
-          const normalUsers = allUsers.filter((u) => u.role === "User");
-          setUsers(normalUsers);
+
+          // Para SuperAdmin: mostrar todos los usuarios
+          // Para Admin: mostrar solo usuarios normales
+          const filteredUsers =
+            user.role === "SuperAdmin"
+              ? allUsers
+              : allUsers.filter((u) => u.role === "User");
+
+          setUsers(filteredUsers);
         }
       } catch (error) {
         console.error("Error al cargar usuarios:", error);
@@ -60,23 +62,27 @@ export default function ChatHistoryPage() {
 
       try {
         const loadedConversations =
-          currentUser.role === "Admin"
+          currentUser.role === "Admin" || currentUser.role === "SuperAdmin"
             ? await chatService.getAllConversations()
             : await chatService.getConversations(
                 currentUser.id,
                 currentUser.role
               );
 
-        // Filtrar conversaciones de admin si el usuario actual es admin
-        const filteredConversations =
-          currentUser.role === "Admin"
-            ? loadedConversations.filter((conv) => {
-                const conversationUser = users.find(
-                  (u) => u.id === conv.userId
-                );
-                return conversationUser?.role === "User";
-              })
-            : loadedConversations;
+        // Filtrar conversaciones según el rol
+        let filteredConversations = loadedConversations;
+
+        if (currentUser.role === "Admin") {
+          // Los Admin solo ven conversaciones de usuarios normales
+          filteredConversations = loadedConversations.filter((conv) => {
+            const conversationUser = users.find((u) => u.id === conv.userId);
+            return conversationUser?.role === "User";
+          });
+        } else if (currentUser.role === "SuperAdmin") {
+          // Los SuperAdmin ven todas las conversaciones por defecto
+          // No se aplica filtro adicional aquí, pueden ver todo
+          filteredConversations = loadedConversations;
+        }
 
         setConversations(filteredConversations);
       } catch (error) {
@@ -108,52 +114,13 @@ export default function ChatHistoryPage() {
 
     const matchesUser = selectedUser === "all" || conv.userId === selectedUser;
 
-    const matchesDate = !date?.from
-      ? true
-      : conv.lastMessageDate >= date.from &&
-        (!date.to || conv.lastMessageDate <= date.to);
-
-    return matchesSearch && matchesUser && matchesDate;
+    return matchesSearch && matchesUser;
   });
-
-  const handleDeleteConversation = async (
-    e: React.MouseEvent,
-    conversationId: string
-  ) => {
-    e.stopPropagation();
-
-    try {
-      const user = await authService.getCurrentUser();
-      if (!user) return;
-
-      // Solo permitir eliminar si es Admin o si es el dueño de la conversación
-      const conversation = conversations.find((c) => c.id === conversationId);
-      if (user.role !== "Admin" && conversation?.userId !== user.id) {
-        toast.error("No tienes permiso para eliminar esta conversación");
-        return;
-      }
-
-      await chatService.deleteConversation(conversationId);
-      const updatedConversations = conversations.filter(
-        (conv) => conv.id !== conversationId
-      );
-      setConversations(updatedConversations);
-
-      if (activeConversation && activeConversation.id === conversationId) {
-        setActiveConversation(null);
-      }
-
-      toast.success("Conversación eliminada");
-    } catch (error) {
-      console.error("Error al eliminar conversación:", error);
-      toast.error("Error al eliminar la conversación");
-    }
-  };
 
   return (
     <div className="h-[calc(100vh-4rem)] max-w-full overflow-hidden">
       <div className="flex h-full max-w-full">
-        <div className="bg-white shadow-md w-80 flex-shrink-0 flex flex-col h-full overflow-hidden">
+        <div className="bg-white shadow-md w-96 flex-shrink-0 flex flex-col h-full overflow-hidden">
           <div className="p-4 border-b bg-[#2B577A]">
             <h2 className="font-bold text-lg text-white text-left">
               Historial de chats
@@ -165,19 +132,17 @@ export default function ChatHistoryPage() {
             setSearchTerm={setSearchTerm}
             selectedUser={selectedUser}
             setSelectedUser={setSelectedUser}
-            date={date}
-            setDate={setDate}
-            open={open}
-            setOpen={setOpen}
             users={users}
-            isAdmin={currentUser.role === "Admin"}
+            isAdmin={
+              currentUser.role === "Admin" || currentUser.role === "SuperAdmin"
+            }
+            isSuperAdmin={currentUser.role === "SuperAdmin"}
           />
 
           <ConversationList
             conversations={filteredConversations}
             activeConversation={activeConversation}
             onSelectConversation={setActiveConversation}
-            onDeleteConversation={handleDeleteConversation}
             currentUserId={currentUser.id}
             isAdmin={
               currentUser.role === "Admin" || currentUser.role === "SuperAdmin"
