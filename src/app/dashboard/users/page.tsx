@@ -364,75 +364,84 @@ const Users: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id} className="hover:bg-gray-50">
-                  <TableCell>
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-[#BED1E0] rounded-full flex items-center justify-center">
-                        <UserIcon className="h-5 w-5 text-[#2B577A]" />
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.name}
+              {users
+                .filter((user) => {
+                  // Si es SuperAdmin, puede ver a todos
+                  if (isSuperAdmin) return true;
+                  // Si es Admin, puede ver a todos excepto SuperAdmin
+                  if (isAdmin) return user.role !== "SuperAdmin";
+                  // Si no es admin ni superadmin, solo puede verse a sí mismo
+                  return user.id === currentLoggedUser.id;
+                })
+                .map((user) => (
+                  <TableRow key={user.id} className="hover:bg-gray-50">
+                    <TableCell>
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10 bg-[#BED1E0] rounded-full flex items-center justify-center">
+                          <UserIcon className="h-5 w-5 text-[#2B577A]" />
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {user.name}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-gray-900">
-                      {user.email || "-"}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.role === "SuperAdmin"
-                          ? "bg-red-100 text-red-800"
-                          : user.role === "Admin"
-                          ? "bg-purple-100 text-purple-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
-                      {user.role}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end space-x-1">
-                      {(user.id === currentLoggedUser.id ||
-                        (isAdmin && user.role !== "Admin") ||
-                        (isSuperAdmin && user.role === "Admin") ||
-                        (isSuperAdmin &&
-                          user.role === "SuperAdmin" &&
-                          user.id === currentLoggedUser.id)) && (
-                        <Button
-                          onClick={() => handleOpenModal(user)}
-                          variant="ghost"
-                          size="sm"
-                          className="cursor-pointer text-blue-600 hover:text-blue-900"
-                          title="Editar usuario"
-                        >
-                          <Edit size={18} />
-                        </Button>
-                      )}
-                      {((isAdmin &&
-                        user.role !== "Admin" &&
-                        user.role !== "SuperAdmin") ||
-                        (isSuperAdmin && user.role === "Admin")) &&
-                        user.id !== currentLoggedUser.id && (
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-gray-900">
+                        {user.email || "-"}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          user.role === "SuperAdmin"
+                            ? "bg-red-100 text-red-800"
+                            : user.role === "Admin"
+                            ? "bg-purple-100 text-purple-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        {user.role}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-1">
+                        {(user.id === currentLoggedUser.id ||
+                          (isAdmin && user.role !== "Admin") ||
+                          (isSuperAdmin && user.role === "Admin") ||
+                          (isSuperAdmin &&
+                            user.role === "SuperAdmin" &&
+                            user.id === currentLoggedUser.id)) && (
                           <Button
-                            onClick={() => handleDeleteUser(user.id)}
+                            onClick={() => handleOpenModal(user)}
                             variant="ghost"
                             size="sm"
-                            className="cursor-pointer text-red-600 hover:text-red-900"
-                            title="Eliminar usuario"
+                            className="cursor-pointer text-blue-600 hover:text-blue-900"
+                            title="Editar usuario"
                           >
-                            <Trash size={18} />
+                            <Edit size={18} />
                           </Button>
                         )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        {((isAdmin &&
+                          user.role !== "Admin" &&
+                          user.role !== "SuperAdmin") ||
+                          (isSuperAdmin && user.role === "Admin")) &&
+                          user.id !== currentLoggedUser.id && (
+                            <Button
+                              onClick={() => handleDeleteUser(user.id)}
+                              variant="ghost"
+                              size="sm"
+                              className="cursor-pointer text-red-600 hover:text-red-900"
+                              title="Eliminar usuario"
+                            >
+                              <Trash size={18} />
+                            </Button>
+                          )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </div>
