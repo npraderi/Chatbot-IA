@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation"; // <-- import
+import { usePathname } from "next/navigation";
 import Navigation from "@/components/Navigation";
 import { authService, User as UserType } from "@/services/authService";
 import {
@@ -10,6 +10,7 @@ import {
   suppressHydrationWarnings,
 } from "@/lib/error-utils";
 import { toast } from "sonner";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function DashboardLayout({
   children,
@@ -17,7 +18,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
-  const pathname = usePathname(); // <-- ruta actual
+  const pathname = usePathname();
+
+  // Excluir la página de login de la protección
+  const isLoginPage = pathname === "/dashboard/login";
 
   // Desactivar errores de desarrollo y supresión de hidratación
   useEffect(() => {
@@ -41,10 +45,22 @@ export default function DashboardLayout({
     loadUser();
   }, [pathname]);
 
+  // Si es la página de login, mostramos el contenido sin protección
+  if (isLoginPage) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50">
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
+    );
+  }
+
+  // Para el resto de páginas, aplicamos la protección
   return (
-    <div className="flex flex-col h-screen bg-gray-50 ">
-      <main className="flex-1 overflow-auto">{children}</main>
-      {currentUser && <Navigation />}
-    </div>
+    <ProtectedRoute>
+      <div className="flex flex-col h-screen bg-gray-50">
+        <main className="flex-1 overflow-auto">{children}</main>
+        {currentUser && <Navigation />}
+      </div>
+    </ProtectedRoute>
   );
 }

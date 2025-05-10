@@ -16,7 +16,51 @@ export async function initAdmin() {
         );
       }
 
-      const serviceAccount = JSON.parse(serviceAccountKey);
+      // Intentar parsear directamente, si falla, intentar decodificar base64
+      let serviceAccount;
+      try {
+        serviceAccount = JSON.parse(serviceAccountKey);
+
+        // Corregir el formato de la clave privada si es necesario
+        if (
+          serviceAccount.private_key &&
+          typeof serviceAccount.private_key === "string"
+        ) {
+          // Reemplazar los saltos de línea escapados por saltos de línea reales
+          serviceAccount.private_key = serviceAccount.private_key
+            .replace(/\\n/g, "\n")
+            .replace(/\\\\/g, "\\");
+        }
+      } catch (parseError: unknown) {
+        try {
+          // Intentar decodificar desde base64 en caso de error
+          const decodedKey = Buffer.from(
+            serviceAccountKey,
+            "base64"
+          ).toString();
+          serviceAccount = JSON.parse(decodedKey);
+
+          // Corregir el formato de la clave privada si es necesario
+          if (
+            serviceAccount.private_key &&
+            typeof serviceAccount.private_key === "string"
+          ) {
+            serviceAccount.private_key = serviceAccount.private_key
+              .replace(/\\n/g, "\n")
+              .replace(/\\\\/g, "\\");
+          }
+        } catch (decodeError) {
+          console.error("Error al parsear JSON:", parseError);
+          console.error("Error al decodificar base64:", decodeError);
+          const errorMessage =
+            parseError instanceof Error
+              ? parseError.message
+              : "Error desconocido";
+          throw new Error(
+            `Error al parsear FIREBASE_SERVICE_ACCOUNT_KEY: ${errorMessage}`
+          );
+        }
+      }
 
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
