@@ -2,9 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService, User } from "@/services/authService";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, User as UserIcon, Key } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 
 const Profile: React.FC = () => {
   const router = useRouter();
@@ -31,6 +32,17 @@ const Profile: React.FC = () => {
     authService.logout();
     toast.success("Sesión cerrada correctamente");
     router.push("/dashboard/login");
+  };
+
+  const handleResetPassword = async () => {
+    try {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, currentUser.email);
+      toast.success("Se ha enviado un correo para restablecer la contraseña");
+    } catch (error) {
+      console.error("Error al enviar correo de restablecimiento:", error);
+      toast.error("Error al enviar el correo de restablecimiento");
+    }
   };
 
   return (
@@ -133,13 +145,24 @@ const Profile: React.FC = () => {
           )}
 
           {/* Botón de logout */}
-          <button
-            onClick={handleLogout}
-            className="cursor-pointer w-full mt-4 bg-[#336633] hover:bg-[#336633]/90 text-white py-2.5 sm:py-3 px-4 rounded-md flex items-center justify-center transition-colors"
-          >
-            <LogOut size={16} className="mr-2" />
-            <span className="text-sm sm:text-base">Cerrar sesión</span>
-          </button>
+          <div className="space-y-4">
+            {currentUser.role === "User" && (
+              <button
+                onClick={handleResetPassword}
+                className="cursor-pointer w-full bg-[#2B577A] hover:bg-[#2B577A]/90 text-white py-2.5 sm:py-3 px-4 rounded-md flex items-center justify-center transition-colors"
+              >
+                <Key size={16} className="mr-2" />
+                <span className="text-sm sm:text-base">Cambiar contraseña</span>
+              </button>
+            )}
+            <button
+              onClick={handleLogout}
+              className=" cursor-pointer  w-full bg-[#336633] hover:bg-[#336633]/90 text-white py-2.5 sm:py-3 px-4 rounded-md flex items-center justify-center transition-colors"
+            >
+              <LogOut size={16} className="mr-2" />
+              <span className="text-sm sm:text-base">Cerrar sesión</span>
+            </button>
+          </div>
         </div>
       </Card>
     </div>
