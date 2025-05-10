@@ -129,7 +129,7 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
 
     // Sobreescribir console.error para evitar mensajes de NextJS
     const originalConsoleError = console.error;
-    console.error = function (...args: any[]): void {
+    console.error = function (...args: unknown[]): void {
       // Filtrar errores específicos de NextJS o React Development
       const errorString = args.join(" ");
       if (
